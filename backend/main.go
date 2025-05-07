@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/clopezbyte/app-entradas-salidas/backend/routes"
+	"github.com/clopezbyte/app-entradas-salidas/routes"
 )
 
 func main() {
