@@ -22,4 +22,5 @@ override.tf.json
 
 # Misc
 terraform/.terraformrc
+terraform/.terraform
 terraform.rc
