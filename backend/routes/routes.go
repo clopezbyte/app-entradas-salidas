@@ -1,17 +1,18 @@
 package routes
 
 import (
-	"net/http"
+	"database/sql"
 
 	"github.com/clopezbyte/app-entradas-salidas/handlers"
 
 	"github.com/gorilla/mux"
 )
 
-func SetupRouter() *mux.Router {
+func SetupRouter(db *sql.DB) *mux.Router {
 	r := mux.NewRouter()
-	r.HandleFunc("/entrada", handlers.RegisterEntrada).Methods("POST")
-	r.HandleFunc("/salida", handlers.RegisterSalida).Methods("POST")
-	http.Handle("/", r)
+	r.HandleFunc("/health", handlers.HealthCheck).Methods("GET")
+	r.HandleFunc("/locations", handlers.GetBodegaLocation(db)).Methods("GET")
+	r.HandleFunc("/export", handlers.ExportAndEmail).Methods("POST")
+	r.HandleFunc("/bodega-history", handlers.GetBodegaData(db)).Methods("GET")
 	return r
 }
