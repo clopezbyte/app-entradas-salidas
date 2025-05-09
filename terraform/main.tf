@@ -16,18 +16,27 @@ data "google_storage_bucket_object" "service_account_key" {
 
 # Firestore Database
 resource "google_firestore_database" "default" {
-  name        = "(default)"
+  name        = "default"
   location_id = var.region
   project     = var.project_id
   type        = "FIRESTORE_NATIVE"
 }
 
+# Retrieve the self-link of the default network
+data "google_compute_network" "default" {
+  name    = "default"
+  project = var.project_id
+}
+
 # VPC connector for API
 resource "google_vpc_access_connector" "in-out-goods-app-vpc-connector" {
-  name          = "in-out-goods-app-vpc-connector"
+  name          = "in-out-vpc-conn"
   region        = var.region
-  network       = "(default)" 
+  network       = data.google_compute_network.default.self_link
   ip_cidr_range = "10.8.0.0/28" 
+  min_instances = 2
+  max_instances = 10
+  machine_type = "f1-micro"
 }
 
 # Cloud Run Service (API)
@@ -36,12 +45,17 @@ resource "google_cloud_run_service" "in-out-goods-app-api" {
   location = var.region
   project  = var.project_id
 
+  metadata {
+    annotations = {
+        "run.googleapis.com/ingress"                     = "all"
+    }
+  }
+
   template {
     metadata {
       annotations = {
         "run.googleapis.com/vpc-access-connector"        = google_vpc_access_connector.in-out-goods-app-vpc-connector.name
         "run.googleapis.com/vpc-egress"                  = "private-ranges-only"
-        "run.googleapis.com/ingress"                     = "all"
       }
     }
 
@@ -65,5 +79,7 @@ resource "google_cloud_run_service" "in-out-goods-app-api" {
     percent         = 100
     latest_revision = true
   }
+  
+  depends_on = [google_vpc_access_connector.in-out-goods-app-vpc-connector]
 }
 
