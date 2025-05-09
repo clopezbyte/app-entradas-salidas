@@ -5,12 +5,19 @@ import (
 	"log"
 	"net/http"
 
-	_ "github.com/lib/pq" //PostgreSQL driver
-
 	"github.com/clopezbyte/app-entradas-salidas/routes"
+	_ "github.com/lib/pq" //PostgreSQL driver
 )
 
 func main() {
+
+	// password := "admin"
+	// hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	// if err != nil {
+	// 	fmt.Println("Error hashing password:", err)
+	// 	return
+	// }
+	// fmt.Println("Hashed password:", string(hashedPassword))
 
 	//DB conn (pg or firestore)
 	db, err := sql.Open("postgres", "host=localhost port=5434 user=admin password=admin dbname=test sslmode=disable")

@@ -6,16 +6,14 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/clopezbyte/app-entradas-salidas/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func GetCreds(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse JSON request body for username and password
-		var creds struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-		}
+		var creds models.User
 
 		if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -23,16 +21,21 @@ func GetCreds(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if creds.Username == "" || creds.Password == "" {
-			http.Error(w, "Missing username or password", http.StatusBadRequest)
-			log.Println("Missing username or password")
+		if creds.Username == "" {
+			http.Error(w, "Missing username", http.StatusBadRequest)
+			log.Println("Missing username")
+			return
+		}
+		if creds.Password == "" {
+			http.Error(w, "Missing password", http.StatusBadRequest)
+			log.Println("Missing password")
 			return
 		}
 
 		// Query the database for the hashed password
-		query := "SELECT password FROM users WHERE username = ?"
-		var hashedPassword string
-		err := db.QueryRow(query, creds.Username).Scan(&hashedPassword)
+		query := "SELECT password, role FROM users WHERE username = $1"
+		var hashedPassword, role string
+		err := db.QueryRow(query, creds.Username).Scan(&hashedPassword, &role)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -52,12 +55,16 @@ func GetCreds(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Authentication successful
-		log.Printf("Successfully authenticated user: %v", creds.Username)
+		log.Printf("Successfully authenticated user: %v with role: %v", creds.Username, role)
 
 		// Return a safe response (e.g., username or user role)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(struct {
 			Username string `json:"username"`
-		}{Username: creds.Username})
+			Role     string `json:"role"`
+		}{
+			Username: creds.Username,
+			Role:     role,
+		})
 	}
 }
