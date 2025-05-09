@@ -15,5 +15,6 @@ func SetupRouter(db *sql.DB) *mux.Router {
 	r.HandleFunc("/export", handlers.ExportAndEmail).Methods("POST")
 	r.HandleFunc("/bodega-history", handlers.GetBodegaData(db)).Methods("GET")
 	r.HandleFunc("/creds", handlers.GetCreds(db)).Methods("POST")
+	r.HandleFunc("/entradas", handlers.HandleEntradasSubmit).Methods("POST")
 	return r
 }
