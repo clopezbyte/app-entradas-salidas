@@ -83,3 +83,11 @@ resource "google_cloud_run_service" "in-out-goods-app-api" {
   depends_on = [google_vpc_access_connector.in-out-goods-app-vpc-connector]
 }
 
+# Allow unauthenticated invocations to API
+resource "google_cloud_run_service_iam_member" "unauthenticated_invoker" {
+  service    = google_cloud_run_service.in-out-goods-app-api.name
+  location   = var.region
+  project    = var.project_id
+  role       = "roles/run.invoker"
+  member     = "allUsers"
+}
