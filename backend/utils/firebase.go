@@ -40,3 +40,16 @@ func VerifyIDToken(idToken string) (*auth.Token, error) {
 
 	return token, nil
 }
+
+// Extract token from header
+func GetTokenFromHeader(authHeader string) (string, error) {
+	if authHeader == "" {
+		return "", errors.New("missing Authorization token")
+	}
+
+	if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+		return "", errors.New("invalid token format")
+	}
+
+	return authHeader[7:], nil
+}
