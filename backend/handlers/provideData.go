@@ -112,13 +112,13 @@ func HandleProvideSalidasData(w http.ResponseWriter, r *http.Request) {
 	// Parse Firestore documents into a slice of EntradasData
 	var results []models.SalidasData
 	for _, doc := range docs {
-		var entrada models.SalidasData
-		if err := doc.DataTo(&entrada); err != nil {
+		var salida models.SalidasData
+		if err := doc.DataTo(&salida); err != nil {
 			log.Printf("Error parsing Firestore document: %v", err)
 			http.Error(w, "Error processing data", http.StatusInternalServerError)
 			return
 		}
-		results = append(results, entrada)
+		results = append(results, salida)
 	}
 
 	// Return JSON response
