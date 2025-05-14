@@ -8,6 +8,7 @@ type Entradas struct {
 	TipoDelivery          string    `json:"tipo_delivery"`
 	BodegaRecepcion       string    `json:"bodega_recepcion"`
 	ProveedorRecepcion    string    `json:"proveedor_recepcion"`
+	Cliente               string    `json:"cliente"`
 	NumeroRemisionFactura int64     `json:"numero_remision_factura"`
 	PersonaRecepcion      string    `json:"persona_recepcion"`
 	FechaRecepcion        time.Time `json:"fecha_recepcion"`
@@ -25,5 +26,6 @@ type EntradasData struct {
 	NumeroRemision     int       `firestore:"NumeroRemisionFactura"`
 	PersonaRecepcion   string    `firestore:"PersonaRecepcion"`
 	ProveedorRecepcion string    `firestore:"ProveedorRecepcion"`
+	Cliente            string    `firestore:"Cliente"`
 	TipoDelivery       string    `firestore:"TipoDelivery"`
 }

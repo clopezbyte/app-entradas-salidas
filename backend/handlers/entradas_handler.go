@@ -2,14 +2,15 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/storage"
@@ -40,45 +41,36 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract file
-	file, handler, err := r.FormFile("evidencia_recepcion")
-	if err != nil {
-		http.Error(w, "Error reading image", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
+	// Extract the base64Data from the "evidencia_recepcion" object
+	evidenciaObject := r.FormValue("evidencia_recepcion")           // Contain object as string
+	log.Println("Raw evidencia_recepcion string:", evidenciaObject) // Debug how does it look like
 
-	// Read the entire file into a buffer (you already limit to 5MB above)
-	data, err := io.ReadAll(file)
-	if err != nil {
-		http.Error(w, "Failed to read uploaded file", http.StatusInternalServerError)
+	// Assuming the evidence object is passed as a JSON string, you can unmarshal it
+	var evidencia map[string]interface{}
+	if err := json.Unmarshal([]byte(evidenciaObject), &evidencia); err != nil {
+		http.Error(w, "Failed to parse evidencia_recepcion", http.StatusBadRequest)
 		return
 	}
 
-	// Log file information for debugging
-	log.Printf("File upload info - Name: %s, Size: %d bytes, Content-Type from header: %s",
-		handler.Filename, len(data), handler.Header.Get("Content-Type"))
-
-	// Determine content type - first try from file extension
-	var contentType string
-	ext := strings.ToLower(filepath.Ext(handler.Filename))
-	switch ext {
-	case ".jpg", ".jpeg":
-		contentType = "image/jpeg"
-	case ".png":
-		contentType = "image/png"
-	case ".gif":
-		contentType = "image/gif"
-	case ".webp":
-		contentType = "image/webp"
-	case ".heic":
-		contentType = "image/heic"
-	default:
-		// Fallback to content detection
-		contentType = http.DetectContentType(data[:512])
+	// Extract the base64 data from the map
+	b64, ok := evidencia["base64Data"].(string)
+	if !ok || b64 == "" {
+		http.Error(w, "Missing base64 image", http.StatusBadRequest)
+		return
 	}
 
-	log.Printf("Determined content type: %s", contentType)
+	// Decode the base64 string
+	decoded, err := utils.DecodeB64(b64)
+	if err != nil {
+		http.Error(w, "B64 decoding error", http.StatusBadRequest)
+		return
+	}
+
+	contentType := http.DetectContentType(decoded)
+	if !strings.HasPrefix(contentType, "image/") {
+		http.Error(w, "Invalid image content", http.StatusBadRequest)
+		return
+	}
 
 	// Upload to GCS
 	ctx := context.Background()
@@ -90,19 +82,18 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	defer client.Close()
 
 	bucket := "app-entradas-salidas-merc"
-	object := fmt.Sprintf("evidencias_entradas/%d_%s", time.Now().UnixNano(), handler.Filename)
+	object := fmt.Sprintf("evidencias_entradas/%s.jpeg", uuid.New().String())
 	wc := client.Bucket(bucket).Object(object).NewWriter(ctx)
 
 	// Set proper content type and metadata
 	wc.ContentType = contentType
 	wc.Metadata = map[string]string{
-		"original-filename":     handler.Filename,
-		"upload-source":         "retool-app",
-		"original-content-type": handler.Header.Get("Content-Type"),
+		"upload-source":         "retool-app-entradas",
+		"original-content-type": contentType,
 	}
 
 	// Write the file data
-	if _, err := wc.Write(data); err != nil {
+	if _, err := wc.Write(decoded); err != nil {
 		http.Error(w, "Error uploading image", http.StatusInternalServerError)
 		return
 	}
@@ -129,6 +120,11 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cliente := r.FormValue("cliente")
+	if cliente == "null" { //Not a devolución rma case
+		cliente = "N/A"
+	}
+
 	fechaRecepcion, err := time.Parse("2006-01-02", r.FormValue("fecha_recepcion"))
 	if err != nil {
 		http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
@@ -140,6 +136,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		TipoDelivery:          r.FormValue("tipo_delivery"),
 		BodegaRecepcion:       r.FormValue("bodega_recepcion"),
 		ProveedorRecepcion:    r.FormValue("proveedor_recepcion"),
+		Cliente:               cliente,
 		NumeroRemisionFactura: numRem,
 		PersonaRecepcion:      r.FormValue("persona_recepcion"),
 		FechaRecepcion:        fechaRecepcion,
@@ -192,45 +189,34 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract file
-	file, handler, err := r.FormFile("evidencia_recepcion")
-	if err != nil {
-		http.Error(w, "Error reading image", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
+	// Extract and parse evidencia_recepcion as JSON string
+	evidenciaObject := r.FormValue("evidencia_salida")
+	log.Println("Raw evidencia_salida string:", evidenciaObject)
 
-	// Read the entire file into a buffer (you already limit to 5MB above)
-	data, err := io.ReadAll(file)
-	if err != nil {
-		http.Error(w, "Failed to read uploaded file", http.StatusInternalServerError)
+	var evidencia map[string]interface{}
+	if err := json.Unmarshal([]byte(evidenciaObject), &evidencia); err != nil {
+		http.Error(w, "Failed to parse evidencia_salida", http.StatusBadRequest)
 		return
 	}
 
-	// Log file information for debugging
-	log.Printf("File upload info - Name: %s, Size: %d bytes, Content-Type from header: %s",
-		handler.Filename, len(data), handler.Header.Get("Content-Type"))
-
-	// Determine content type - first try from file extension
-	var contentType string
-	ext := strings.ToLower(filepath.Ext(handler.Filename))
-	switch ext {
-	case ".jpg", ".jpeg":
-		contentType = "image/jpeg"
-	case ".png":
-		contentType = "image/png"
-	case ".gif":
-		contentType = "image/gif"
-	case ".webp":
-		contentType = "image/webp"
-	case ".heic":
-		contentType = "image/heic"
-	default:
-		// Fallback to content detection
-		contentType = http.DetectContentType(data[:512])
+	b64, ok := evidencia["base64Data"].(string)
+	if !ok || b64 == "" {
+		http.Error(w, "Missing base64 image", http.StatusBadRequest)
+		return
 	}
 
-	log.Printf("Determined content type: %s", contentType)
+	// Decode and validate image
+	decoded, err := utils.DecodeB64(b64)
+	if err != nil {
+		http.Error(w, "B64 decoding error", http.StatusBadRequest)
+		return
+	}
+
+	contentType := http.DetectContentType(decoded)
+	if !strings.HasPrefix(contentType, "image/") {
+		http.Error(w, "Invalid image content", http.StatusBadRequest)
+		return
+	}
 
 	// Upload to GCS
 	ctx := context.Background()
@@ -242,19 +228,17 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	defer client.Close()
 
 	bucket := "app-entradas-salidas-merc"
-	object := fmt.Sprintf("evidencias_salidas/%d_%s", time.Now().UnixNano(), handler.Filename)
+	object := fmt.Sprintf("evidencias_salidas/%s.jpeg", uuid.New().String())
 	wc := client.Bucket(bucket).Object(object).NewWriter(ctx)
 
 	// Set proper content type and metadata
 	wc.ContentType = contentType
 	wc.Metadata = map[string]string{
-		"original-filename":     handler.Filename,
-		"upload-source":         "retool-app",
-		"original-content-type": handler.Header.Get("Content-Type"),
+		"upload-source":         "retool-app-salidas",
+		"original-content-type": contentType,
 	}
 
-	// Write the file data
-	if _, err := wc.Write(data); err != nil {
+	if _, err := wc.Write(decoded); err != nil {
 		http.Error(w, "Error uploading image", http.StatusInternalServerError)
 		return
 	}
@@ -288,7 +272,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		NumeroOrdenConsecutivo: numOrdenCons,
 		PersonaEntrega:         r.FormValue("persona_entrega"),
 		FechaSalida:            fechaSalida,
-		EvidenciaRecepcion:     imageURL,
+		EvidenciaSalida:        imageURL,
 		Comentarios:            r.FormValue("comentarios"),
 	}
 
