@@ -15,3 +15,15 @@ type Entradas struct {
 	Cantidad              int64     `json:"cantidad"`
 	Comentarios           string    `json:"comentarios"`
 }
+
+type EntradasData struct {
+	BodegaRecepcion    string    `firestore:"BodegaRecepcion"`
+	Cantidad           int       `firestore:"Cantidad"`
+	Comentarios        string    `firestore:"Comentarios"`
+	EvidenciaRecepcion string    `firestore:"EvidenciaRecepcion"`
+	FechaRecepcion     time.Time `firestore:"FechaRecepcion"`
+	NumeroRemision     int       `firestore:"NumeroRemisionFactura"`
+	PersonaRecepcion   string    `firestore:"PersonaRecepcion"`
+	ProveedorRecepcion string    `firestore:"ProveedorRecepcion"`
+	TipoDelivery       string    `firestore:"TipoDelivery"`
+}

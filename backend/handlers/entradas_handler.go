@@ -4,44 +4,27 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
-	"strconv"
-	"time"
-
 	"log"
+	"net/http"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/storage"
-	"github.com/clopezbyte/app-entradas-salidas/utils"
-
 	"github.com/clopezbyte/app-entradas-salidas/models"
+	"github.com/clopezbyte/app-entradas-salidas/utils"
 )
 
 func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
-
-	// // Get the Authorization token from the header
-	// authHeader := r.Header.Get("Authorization")
-	// if authHeader == "" {
-	// 	http.Error(w, "Missing Authorization token", http.StatusUnauthorized)
-	// 	return
-	// }
-
-	// // Strip the "Bearer " prefix from the token
-	// if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
-	// 	http.Error(w, "Invalid token format", http.StatusUnauthorized)
-	// 	return
-	// }
-	// idToken := authHeader[7:] // Extract the actual token
-
-	//////////
-	//Improvement: specific fn to get the token from header - for reusability
+	// Get token from header using utils
 	authHeader := r.Header.Get("Authorization")
 	idToken, err := utils.GetTokenFromHeader(authHeader)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized) // Use the error message from the utility function
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	//////////
 
 	// Verify the token using the firebase package
 	token, err := utils.VerifyIDToken(idToken)
@@ -65,6 +48,38 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// Read the entire file into a buffer (you already limit to 5MB above)
+	data, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Failed to read uploaded file", http.StatusInternalServerError)
+		return
+	}
+
+	// Log file information for debugging
+	log.Printf("File upload info - Name: %s, Size: %d bytes, Content-Type from header: %s",
+		handler.Filename, len(data), handler.Header.Get("Content-Type"))
+
+	// Determine content type - first try from file extension
+	var contentType string
+	ext := strings.ToLower(filepath.Ext(handler.Filename))
+	switch ext {
+	case ".jpg", ".jpeg":
+		contentType = "image/jpeg"
+	case ".png":
+		contentType = "image/png"
+	case ".gif":
+		contentType = "image/gif"
+	case ".webp":
+		contentType = "image/webp"
+	case ".heic":
+		contentType = "image/heic"
+	default:
+		// Fallback to content detection
+		contentType = http.DetectContentType(data[:512])
+	}
+
+	log.Printf("Determined content type: %s", contentType)
+
 	// Upload to GCS
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
@@ -78,16 +93,28 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	object := fmt.Sprintf("evidencias_entradas/%d_%s", time.Now().UnixNano(), handler.Filename)
 	wc := client.Bucket(bucket).Object(object).NewWriter(ctx)
 
-	if _, err = io.Copy(wc, file); err != nil {
+	// Set proper content type and metadata
+	wc.ContentType = contentType
+	wc.Metadata = map[string]string{
+		"original-filename":     handler.Filename,
+		"upload-source":         "retool-app",
+		"original-content-type": handler.Header.Get("Content-Type"),
+	}
+
+	// Write the file data
+	if _, err := wc.Write(data); err != nil {
 		http.Error(w, "Error uploading image", http.StatusInternalServerError)
 		return
 	}
+
 	if err := wc.Close(); err != nil {
 		http.Error(w, "Error finalizing image", http.StatusInternalServerError)
 		return
 	}
 
+	// Create public URL
 	imageURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucket, object)
+	log.Printf("File uploaded successfully to: %s with content type: %s", imageURL, contentType)
 
 	// Parse form values
 	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64)
@@ -122,7 +149,6 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save to Firestore
-	// Specify project and target db, otherwise it will try to target default
 	fsClient, err := firestore.NewClientWithDatabase(ctx, "b-materials", "app-in-out-good")
 	if err != nil {
 		http.Error(w, "Firestore error", http.StatusInternalServerError)
@@ -144,12 +170,11 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
-
-	//Get token from header using utils
+	// Get token from header using utils
 	authHeader := r.Header.Get("Authorization")
 	idToken, err := utils.GetTokenFromHeader(authHeader)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized) // Use the error message from the utility function
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -175,6 +200,38 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// Read the entire file into a buffer (you already limit to 5MB above)
+	data, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Failed to read uploaded file", http.StatusInternalServerError)
+		return
+	}
+
+	// Log file information for debugging
+	log.Printf("File upload info - Name: %s, Size: %d bytes, Content-Type from header: %s",
+		handler.Filename, len(data), handler.Header.Get("Content-Type"))
+
+	// Determine content type - first try from file extension
+	var contentType string
+	ext := strings.ToLower(filepath.Ext(handler.Filename))
+	switch ext {
+	case ".jpg", ".jpeg":
+		contentType = "image/jpeg"
+	case ".png":
+		contentType = "image/png"
+	case ".gif":
+		contentType = "image/gif"
+	case ".webp":
+		contentType = "image/webp"
+	case ".heic":
+		contentType = "image/heic"
+	default:
+		// Fallback to content detection
+		contentType = http.DetectContentType(data[:512])
+	}
+
+	log.Printf("Determined content type: %s", contentType)
+
 	// Upload to GCS
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
@@ -188,16 +245,28 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	object := fmt.Sprintf("evidencias_salidas/%d_%s", time.Now().UnixNano(), handler.Filename)
 	wc := client.Bucket(bucket).Object(object).NewWriter(ctx)
 
-	if _, err = io.Copy(wc, file); err != nil {
+	// Set proper content type and metadata
+	wc.ContentType = contentType
+	wc.Metadata = map[string]string{
+		"original-filename":     handler.Filename,
+		"upload-source":         "retool-app",
+		"original-content-type": handler.Header.Get("Content-Type"),
+	}
+
+	// Write the file data
+	if _, err := wc.Write(data); err != nil {
 		http.Error(w, "Error uploading image", http.StatusInternalServerError)
 		return
 	}
+
 	if err := wc.Close(); err != nil {
 		http.Error(w, "Error finalizing image", http.StatusInternalServerError)
 		return
 	}
 
+	// Create public URL
 	imageURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucket, object)
+	log.Printf("File uploaded successfully to: %s with content type: %s", imageURL, contentType)
 
 	// Parse form values
 	numOrdenCons, err := strconv.ParseInt(r.FormValue("numero_orden_consecutivo"), 10, 64)
@@ -212,7 +281,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Construct Entradas struct
+	// Construct Salidas struct
 	salida := models.Salidas{
 		BodegaSalida:           r.FormValue("bodega_salida"),
 		ProveedorSalida:        r.FormValue("proveedor_salida"),
@@ -224,7 +293,6 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save to Firestore
-	// Specify project and target db, otherwise it will try to target default
 	fsClient, err := firestore.NewClientWithDatabase(ctx, "b-materials", "app-in-out-good")
 	if err != nil {
 		http.Error(w, "Firestore error", http.StatusInternalServerError)
