@@ -40,33 +40,48 @@ func HandleProvideEntradasData(w http.ResponseWriter, r *http.Request) {
 	}
 	defer fsClient.Close()
 
-	// Build query and query firestore
-	query := fsClient.Collection("entradas").OrderBy("FechaRecepcion", firestore.Desc).Limit(10)
-	docs, err := query.Documents(ctx).GetAll()
-	if err != nil {
-		log.Printf("Error querying Firestore: %v", err)
-		http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
-		return
-	}
+	// Use a channel to collect results
+	resultsChan := make(chan []models.EntradasData)
+	errorChan := make(chan error)
 
-	// Parse Firestore documents into a slice of EntradasData
-	var results []models.EntradasData
-	for _, doc := range docs {
-		var entrada models.EntradasData
-		if err := doc.DataTo(&entrada); err != nil {
-			log.Printf("Error parsing Firestore document: %v", err)
-			http.Error(w, "Error processing data", http.StatusInternalServerError)
+	// Build query and query firestore
+	go func() {
+		query := fsClient.Collection("entradas").OrderBy("FechaRecepcion", firestore.Desc).Limit(10)
+		docs, err := query.Documents(ctx).GetAll()
+		if err != nil {
+			log.Printf("Error querying Firestore: %v", err)
+			http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
 			return
 		}
-		results = append(results, entrada)
-	}
 
-	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(results); err != nil {
-		log.Printf("Error encoding JSON response: %v", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
-		return
+		// Parse Firestore documents into a slice of EntradasData
+		var results []models.EntradasData
+		for _, doc := range docs {
+			var entrada models.EntradasData
+			if err := doc.DataTo(&entrada); err != nil {
+				log.Printf("Error parsing Firestore document: %v", err)
+				http.Error(w, "Error processing data", http.StatusInternalServerError)
+				return
+			}
+			results = append(results, entrada)
+		}
+		resultsChan <- results
+	}()
+
+	// Wait for the goroutine to finish
+	select {
+	case results := <-resultsChan:
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(results); err != nil {
+			log.Printf("Error encoding JSON response: %v", err)
+			http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		}
+	case err := <-errorChan:
+		log.Printf("Error querying Firestore: %v", err)
+		http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
+	case <-ctx.Done():
+		log.Printf("Request context canceled")
+		http.Error(w, "Request canceled", http.StatusRequestTimeout)
 	}
 
 }
@@ -100,33 +115,49 @@ func HandleProvideSalidasData(w http.ResponseWriter, r *http.Request) {
 	}
 	defer fsClient.Close()
 
-	// Build query and query firestore
-	query := fsClient.Collection("salidas").OrderBy("FechaSalida", firestore.Desc).Limit(10)
-	docs, err := query.Documents(ctx).GetAll()
-	if err != nil {
-		log.Printf("Error querying Firestore: %v", err)
-		http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
-		return
-	}
+	// Use a channel to collect results
+	resultsChan := make(chan []models.SalidasData)
+	errorChan := make(chan error)
 
-	// Parse Firestore documents into a slice of EntradasData
-	var results []models.SalidasData
-	for _, doc := range docs {
-		var salida models.SalidasData
-		if err := doc.DataTo(&salida); err != nil {
-			log.Printf("Error parsing Firestore document: %v", err)
-			http.Error(w, "Error processing data", http.StatusInternalServerError)
+	// Build query and query firestore
+	go func() {
+		query := fsClient.Collection("salidas").OrderBy("FechaSalida", firestore.Desc).Limit(10)
+		docs, err := query.Documents(ctx).GetAll()
+		if err != nil {
+			log.Printf("Error querying Firestore: %v", err)
+			http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
 			return
 		}
-		results = append(results, salida)
-	}
+
+		// Parse Firestore documents into a slice of EntradasData
+		var results []models.SalidasData
+		for _, doc := range docs {
+			var salida models.SalidasData
+			if err := doc.DataTo(&salida); err != nil {
+				log.Printf("Error parsing Firestore document: %v", err)
+				http.Error(w, "Error processing data", http.StatusInternalServerError)
+				return
+			}
+			results = append(results, salida)
+		}
+		resultsChan <- results
+	}()
 
 	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(results); err != nil {
-		log.Printf("Error encoding JSON response: %v", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
-		return
+	// Wait for the goroutine to finish
+	select {
+	case results := <-resultsChan:
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(results); err != nil {
+			log.Printf("Error encoding JSON response: %v", err)
+			http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		}
+	case err := <-errorChan:
+		log.Printf("Error querying Firestore: %v", err)
+		http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
+	case <-ctx.Done():
+		log.Printf("Request context canceled")
+		http.Error(w, "Request canceled", http.StatusRequestTimeout)
 	}
 
 }
