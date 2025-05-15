@@ -182,12 +182,15 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("Verified user ID:", token.UID)
+	////////////////////////////////////////////////////////////////////////////
 
 	// Limit file size (5MB)
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		http.Error(w, "Error parsing form", http.StatusBadRequest)
 		return
 	}
+
+	////////////////////////////////////////////////////////////////////////////
 
 	// Extract and parse evidencia_recepcion as JSON string
 	evidenciaObject := r.FormValue("evidencia_salida")
@@ -205,20 +208,8 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Decode and validate image
-	decoded, err := utils.DecodeB64(b64)
-	if err != nil {
-		http.Error(w, "B64 decoding error", http.StatusBadRequest)
-		return
-	}
-
-	contentType := http.DetectContentType(decoded)
-	if !strings.HasPrefix(contentType, "image/") {
-		http.Error(w, "Invalid image content", http.StatusBadRequest)
-		return
-	}
-
-	// Upload to GCS
+	// Decode and upload evidencia_salida
+	bucket := "app-entradas-salidas-merc"
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -227,30 +218,38 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	defer client.Close()
 
-	bucket := "app-entradas-salidas-merc"
-	object := fmt.Sprintf("evidencias_salidas/%s.jpeg", uuid.New().String())
-	wc := client.Bucket(bucket).Object(object).NewWriter(ctx)
-
-	// Set proper content type and metadata
-	wc.ContentType = contentType
-	wc.Metadata = map[string]string{
-		"upload-source":         "retool-app-salidas",
-		"original-content-type": contentType,
+	imageURL, err := utils.UploadImageToGCS(ctx, client, bucket, "evidencias_salidas", b64, "retool-app-salidas")
+	if err != nil {
+		http.Error(w, "Image upload failed: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	log.Printf("File uploaded successfully to: %s", imageURL)
 
-	if _, err := wc.Write(decoded); err != nil {
-		http.Error(w, "Error uploading image", http.StatusInternalServerError)
+	////////////////////////////////////////////////////////////////////////////
+
+	//Extract and parse signature as JSON string
+	signatureObject := r.FormValue("firma_persona_recoge")
+	log.Println("Raw firma_persona_recoge string:", signatureObject)
+	var firma map[string]interface{}
+	if err := json.Unmarshal([]byte(signatureObject), &firma); err != nil {
+		http.Error(w, "Failed to parse firma_persona_recoge", http.StatusBadRequest)
+		return
+	}
+	b64Firma, ok := firma["base64Data"].(string)
+	if !ok || b64Firma == "" {
+		http.Error(w, "Missing base64 firma", http.StatusBadRequest)
 		return
 	}
 
-	if err := wc.Close(); err != nil {
-		http.Error(w, "Error finalizing image", http.StatusInternalServerError)
+	// Decode and upload firma_persona_recoge
+	signatureImageURL, err := utils.UploadImageToGCS(ctx, client, bucket, "evidencias_salidas/salidas_firmas", b64Firma, "retool-app-salidas")
+	if err != nil {
+		http.Error(w, "Signature upload failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Printf("Signature uploaded successfully to: %s", signatureImageURL)
 
-	// Create public URL
-	imageURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucket, object)
-	log.Printf("File uploaded successfully to: %s with content type: %s", imageURL, contentType)
+	////////////////////////////////////////////////////////////////////////////
 
 	// Parse form values
 	numOrdenCons, err := strconv.ParseInt(r.FormValue("numero_orden_consecutivo"), 10, 64)
@@ -271,6 +270,8 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		ProveedorSalida:        r.FormValue("proveedor_salida"),
 		NumeroOrdenConsecutivo: numOrdenCons,
 		PersonaEntrega:         r.FormValue("persona_entrega"),
+		PersonaRecoge:          r.FormValue("persona_recoge"),
+		FirmaPersonaRecoge:     signatureImageURL,
 		FechaSalida:            fechaSalida,
 		EvidenciaSalida:        imageURL,
 		Comentarios:            r.FormValue("comentarios"),
