@@ -131,6 +131,11 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Email block
+	if entradas.TipoDelivery == "Mercancía (Cliente)" && entradas.Cliente != "" {
+		go handleClientEmailNotification(ctx, entradas)
+	}
+
 	// Construct Entradas struct
 	entrada := models.Entradas{
 		TipoDelivery:          r.FormValue("tipo_delivery"),
