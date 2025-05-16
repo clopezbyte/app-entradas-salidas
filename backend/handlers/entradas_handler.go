@@ -24,6 +24,8 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	idToken, err := utils.GetTokenFromHeader(authHeader)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		log.Printf("Invalid header token: %v", err)
+
 		return
 	}
 
@@ -31,6 +33,8 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	token, err := utils.VerifyIDToken(idToken)
 	if err != nil {
 		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		log.Printf("Invalid token: %v", err)
+
 		return
 	}
 	fmt.Println("Verified user ID:", token.UID)
@@ -38,6 +42,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	// Limit file size (5MB)
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		http.Error(w, "Error parsing form", http.StatusBadRequest)
+		log.Printf("Error parsing form: %v", err)
 		return
 	}
 
@@ -49,6 +54,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	var evidencia map[string]interface{}
 	if err := json.Unmarshal([]byte(evidenciaObject), &evidencia); err != nil {
 		http.Error(w, "Failed to parse evidencia_recepcion", http.StatusBadRequest)
+		log.Printf("Error parsing evidencia_recepcion: %v", err)
 		return
 	}
 
@@ -56,6 +62,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	b64, ok := evidencia["base64Data"].(string)
 	if !ok || b64 == "" {
 		http.Error(w, "Missing base64 image", http.StatusBadRequest)
+		log.Println("Missing base64 image", err)
 		return
 	}
 
@@ -77,6 +84,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		http.Error(w, "GCS client error", http.StatusInternalServerError)
+		log.Printf("GCS client error: %v", err)
 		return
 	}
 	defer client.Close()
@@ -95,11 +103,13 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	// Write the file data
 	if _, err := wc.Write(decoded); err != nil {
 		http.Error(w, "Error uploading image", http.StatusInternalServerError)
+		log.Printf("Error uploading image: %v", err)
 		return
 	}
 
 	if err := wc.Close(); err != nil {
 		http.Error(w, "Error finalizing image", http.StatusInternalServerError)
+		log.Printf("Error finalizing image: %v", err)
 		return
 	}
 
@@ -111,12 +121,15 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid numero_remision_factura", http.StatusBadRequest)
+		log.Printf("Error parsing numero_remision_factura: %v", err)
 		return
 	}
 
+	//Validations Block
 	cant, err := strconv.ParseInt(r.FormValue("cantidad"), 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid quantity", http.StatusBadRequest)
+		log.Printf("Error parsing quantity: %v", err)
 		return
 	}
 
@@ -125,15 +138,11 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		cliente = "N/A"
 	}
 
-	fechaRecepcion, err := time.Parse("2006-01-02", r.FormValue("fecha_recepcion"))
+	fechaRecepcion, err := time.Parse("2006-01-02T15:04:05.000-0700", r.FormValue("fecha_recepcion"))
 	if err != nil {
 		http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
+		log.Printf("Error parsing fecha_recepcion: %v", err)
 		return
-	}
-
-	//Email block
-	if entradas.TipoDelivery == "Mercancía (Cliente)" && entradas.Cliente != "" {
-		go handleClientEmailNotification(ctx, entradas)
 	}
 
 	// Construct Entradas struct
@@ -154,9 +163,16 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	fsClient, err := firestore.NewClientWithDatabase(ctx, "b-materials", "app-in-out-good")
 	if err != nil {
 		http.Error(w, "Firestore error", http.StatusInternalServerError)
+		log.Printf("Firestore error: %v", err)
 		return
 	}
 	defer fsClient.Close()
+
+	//Email block
+	if entrada.TipoDelivery == "Devolución (RMA)" && entrada.Cliente != "" {
+		utils.HandleClientEmailNotification(ctx, fsClient, entrada)
+		//replaced goroutine for testing
+	}
 
 	// Add entrada form as new document to "entradas" collection
 	_, _, err = fsClient.Collection("entradas").Add(ctx, entrada)
@@ -177,6 +193,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	idToken, err := utils.GetTokenFromHeader(authHeader)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		log.Printf("Invalid header token: %v", err)
 		return
 	}
 
@@ -184,6 +201,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	token, err := utils.VerifyIDToken(idToken)
 	if err != nil {
 		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		log.Printf("Invalid token: %v", err)
 		return
 	}
 	fmt.Println("Verified user ID:", token.UID)
@@ -192,6 +210,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	// Limit file size (5MB)
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		http.Error(w, "Error parsing form", http.StatusBadRequest)
+		log.Printf("Error parsing form: %v", err)
 		return
 	}
 
@@ -204,12 +223,14 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	var evidencia map[string]interface{}
 	if err := json.Unmarshal([]byte(evidenciaObject), &evidencia); err != nil {
 		http.Error(w, "Failed to parse evidencia_salida", http.StatusBadRequest)
+		log.Printf("Error parsing evidencia_salida: %v", err)
 		return
 	}
 
 	b64, ok := evidencia["base64Data"].(string)
 	if !ok || b64 == "" {
 		http.Error(w, "Missing base64 image", http.StatusBadRequest)
+		log.Printf("Missing base64 image: %v", err)
 		return
 	}
 
@@ -219,6 +240,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		http.Error(w, "GCS client error", http.StatusInternalServerError)
+		log.Printf("GCS client error: %v", err)
 		return
 	}
 	defer client.Close()
@@ -226,6 +248,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	imageURL, err := utils.UploadImageToGCS(ctx, client, bucket, "evidencias_salidas", b64, "retool-app-salidas")
 	if err != nil {
 		http.Error(w, "Image upload failed: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Image upload failed: %v", err)
 		return
 	}
 	log.Printf("File uploaded successfully to: %s", imageURL)
@@ -238,11 +261,13 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	var firma map[string]interface{}
 	if err := json.Unmarshal([]byte(signatureObject), &firma); err != nil {
 		http.Error(w, "Failed to parse firma_persona_recoge", http.StatusBadRequest)
+		log.Printf("Error parsing firma_persona_recoge: %v", err)
 		return
 	}
 	b64Firma, ok := firma["base64Data"].(string)
 	if !ok || b64Firma == "" {
 		http.Error(w, "Missing base64 firma", http.StatusBadRequest)
+		log.Printf("Missing base64 firma: %v", err)
 		return
 	}
 
@@ -250,6 +275,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	signatureImageURL, err := utils.UploadImageToGCS(ctx, client, bucket, "evidencias_salidas/salidas_firmas", b64Firma, "retool-app-salidas")
 	if err != nil {
 		http.Error(w, "Signature upload failed: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Signature upload failed: %v", err)
 		return
 	}
 	log.Printf("Signature uploaded successfully to: %s", signatureImageURL)
@@ -260,12 +286,14 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	numOrdenCons, err := strconv.ParseInt(r.FormValue("numero_orden_consecutivo"), 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid numero_orden_consecutivo", http.StatusBadRequest)
+		log.Printf("Error parsing numero_orden_consecutivo: %v", err)
 		return
 	}
 
-	fechaSalida, err := time.Parse("2006-01-02", r.FormValue("fecha_salida"))
+	fechaSalida, err := time.Parse("2006-01-02T15:04:05.000-0700", r.FormValue("fecha_salida"))
 	if err != nil {
 		http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
+		log.Printf("Error parsing fecha_salida: %v", err)
 		return
 	}
 
@@ -286,6 +314,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	fsClient, err := firestore.NewClientWithDatabase(ctx, "b-materials", "app-in-out-good")
 	if err != nil {
 		http.Error(w, "Firestore error", http.StatusInternalServerError)
+		log.Printf("Firestore error: %v", err)
 		return
 	}
 	defer fsClient.Close()
@@ -295,6 +324,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error saving to Firestore: %v", err)
 		http.Error(w, fmt.Sprintf("Error saving to Firestore: %v", err), http.StatusInternalServerError)
+		log.Printf("Error saving to Firestore: %v", err)
 		return
 	}
 

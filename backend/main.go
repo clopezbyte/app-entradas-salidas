@@ -9,6 +9,12 @@ import (
 
 func main() {
 
+	// Load dotenv only needed in development
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
+
 	router := routes.SetupRouter()
 
 	log.Println("Starting server on :8080...")
