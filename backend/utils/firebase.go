@@ -35,7 +35,7 @@ func InitializeFirebase() (*auth.Client, error) {
 	return client, nil
 }
 
-// Verifies the Firebase ID token from the request header
+// Verify the Firebase ID token from the request header
 func VerifyIDToken(idToken string) (*auth.Token, error) {
 	client, err := InitializeFirebase()
 	if err != nil {
@@ -64,7 +64,7 @@ func GetTokenFromHeader(authHeader string) (string, error) {
 	return authHeader[7:], nil
 }
 
-// generateEmailBody generates the email body using Go templates.
+// Generates  email body
 func generateEmailBody(data models.EmailData) (string, error) {
 	const tpl = `
 <html>
@@ -120,7 +120,7 @@ func generateEmailBody(data models.EmailData) (string, error) {
 	return buf.String(), nil
 }
 
-// sendEmail sends an email using MailerSend API.
+// Sends an email using the MailerSend API
 func sendEmail(to string, repName string, subject, body string) error {
 	apiKey := os.Getenv("MAILERSEND_API_KEY")
 	if apiKey == "" {
@@ -163,7 +163,7 @@ func sendEmail(to string, repName string, subject, body string) error {
 	return nil
 }
 
-// HandleClientEmailNotification looks up the customer and sends an email notification.
+// Query the customer and send an email notification
 func HandleClientEmailNotification(ctx context.Context, firestoreClient *firestore.Client, entrada models.Entradas) {
 	log.Printf("Looking up customer with ID: %s", entrada.Cliente)
 
