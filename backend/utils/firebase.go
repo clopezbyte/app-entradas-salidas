@@ -67,22 +67,46 @@ func GetTokenFromHeader(authHeader string) (string, error) {
 // generateEmailBody generates the email body using Go templates.
 func generateEmailBody(data models.EmailData) (string, error) {
 	const tpl = `
-Hola,
+<html>
+  <body style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+    <p>Hola,</p>
 
-Se ha registrado una nueva devolución para el cliente "{{.Cliente}}".
+    <p>Se ha registrado una nueva devolución para el cliente "<strong>{{.Cliente}}</strong>".</p>
 
-Fecha de entrada: {{.FechaRecepcion}}
-Bodega: {{.BodegaRecepcion}}
-Cantidad: {{.Cantidad}}
-Numero de remisión: {{.NumeroRemision}}
-Con proveedor: {{.ProveedorRecepcion}}
-Link a evidencia de entrada: {{.EvidenciaRecepcion}}
+    <table cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
+      <tr>
+        <td><strong>Fecha de entrada:</strong></td>
+        <td>{{.FechaRecepcion}}</td>
+      </tr>
+      <tr style="background-color:#f9f9f9;">
+        <td><strong>Bodega:</strong></td>
+        <td>{{.BodegaRecepcion}}</td>
+      </tr>
+      <tr>
+        <td><strong>Cantidad:</strong></td>
+        <td>{{.Cantidad}}</td>
+      </tr>
+      <tr style="background-color:#f9f9f9;">
+        <td><strong>Número de remisión:</strong></td>
+        <td>{{.NumeroRemision}}</td>
+      </tr>
+      <tr>
+        <td><strong>Con proveedor:</strong></td>
+        <td>{{.ProveedorRecepcion}}</td>
+      </tr>
+      <tr style="background-color:#f9f9f9;">
+        <td><strong>Link a evidencia de entrada:</strong></td>
+        <td><a href="{{.EvidenciaRecepcion}}" target="_blank" rel="noopener noreferrer">{{.EvidenciaRecepcion}}</a></td>
+      </tr>
+    </table>
 
-Saludos,  
-Buho Logistics  
+    <p>Saludos,<br>Buho Logistics</p>
 
-(Correo automático, favor de no responder.)
+    <p style="font-size: 12px; color: #888;"><em>(Correo automático, favor de no responder.)</em></p>
+  </body>
+</html>
 `
+	// Use html/template for automatic escaping of HTML content
 	t, err := template.New("email").Parse(tpl)
 	if err != nil {
 		return "", err
