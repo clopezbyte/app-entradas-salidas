@@ -28,4 +28,6 @@ type EntradasData struct {
 	ProveedorRecepcion string    `firestore:"ProveedorRecepcion"`
 	Cliente            string    `firestore:"Cliente"`
 	TipoDelivery       string    `firestore:"TipoDelivery"`
+	ASN                string    `firestore:"ASN"`
+	FechaAjusteASN     time.Time `firestore:"FechaAjusteASN"`
 }

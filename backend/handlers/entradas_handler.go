@@ -187,6 +187,157 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"message":"Entrada submitted successfully."}`))
 }
 
+func QueryNumRem(w http.ResponseWriter, r *http.Request) {
+	// Get token from header using utils
+	authHeader := r.Header.Get("Authorization")
+	idToken, err := utils.GetTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		log.Printf("Invalid header token: %v", err)
+
+		return
+	}
+
+	// Verify the token using the firebase package
+	token, err := utils.VerifyIDToken(idToken)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		log.Printf("Invalid token: %v", err)
+
+		return
+	}
+	fmt.Println("Verified user ID:", token.UID)
+
+	// Parse numero remision factura
+	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid numero_remision_factura format", http.StatusBadRequest)
+		log.Printf("Error parsing numero_remision_factura: %v", err)
+		return
+	}
+
+	// Initialize Firestore client
+	ctx := context.Background()
+	fsClient, err := firestore.NewClientWithDatabase(ctx, "b-materials", "app-in-out-good")
+	if err != nil {
+		http.Error(w, "Firestore error", http.StatusInternalServerError)
+		log.Printf("Firestore error: %v", err)
+		return
+	}
+	defer fsClient.Close()
+
+	// Build query and query firestore
+	query := fsClient.Collection("entradas").Where("NumeroRemisionFactura", "==", numRem).Limit(1)
+	docs, err := query.Documents(ctx).GetAll()
+	if err != nil {
+		log.Printf("Error querying Firestore: %v", err)
+		http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse Firestore documents into a slice of EntradasData
+	var results []models.EntradasData
+	for _, doc := range docs {
+		var entrada models.EntradasData
+		if err := doc.DataTo(&entrada); err != nil {
+			log.Printf("Error parsing Firestore document: %v", err)
+			http.Error(w, "Error processing data", http.StatusInternalServerError)
+			return
+		}
+		results = append(results, entrada)
+	}
+
+	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(results); err != nil {
+		log.Printf("Error encoding JSON response: %v", err)
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
+
+}
+
+func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
+	// Get token from header using utils
+	authHeader := r.Header.Get("Authorization")
+	idToken, err := utils.GetTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		log.Printf("Invalid header token: %v", err)
+
+		return
+	}
+
+	// Verify the token using the firebase package
+	token, err := utils.VerifyIDToken(idToken)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		log.Printf("Invalid token: %v", err)
+
+		return
+	}
+	fmt.Println("Verified user ID:", token.UID)
+
+	//Parse ASN update date
+	FechaAjusteASN, err := time.Parse("2006-01-02", r.FormValue("fecha_ajuste_asn"))
+	if err != nil {
+		http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
+		log.Printf("Error parsing fecha_recepcion: %v", err)
+		return
+	}
+
+	// Parse numero remision factura
+	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid numero_remision_factura format", http.StatusBadRequest)
+		log.Printf("Error parsing numero_remision_factura: %v", err)
+		return
+	}
+
+	// Construct ASN struct
+	asn := models.ASN{
+		NumeroRemisionFactura: numRem,
+		ASN:                   r.FormValue("asn"),
+		FechaAjusteASN:        FechaAjusteASN,
+	}
+
+	// Initialize Firestore client
+	ctx := context.Background()
+	fsClient, err := firestore.NewClientWithDatabase(ctx, "b-materials", "app-in-out-good")
+	if err != nil {
+		http.Error(w, "Firestore error", http.StatusInternalServerError)
+		log.Printf("Firestore error: %v", err)
+		return
+	}
+	defer fsClient.Close()
+
+	// Update entrada with ASN
+	// Find the document in "entradas" with the given numero_remision_factura
+	iter := fsClient.Collection("entradas").Where("NumeroRemisionFactura", "==", numRem).Limit(1).Documents(ctx)
+	doc, err := iter.Next()
+	if err != nil {
+		http.Error(w, "No matching entrada found", http.StatusNotFound)
+		log.Printf("No matching entrada found for numero_remision_factura: %d", numRem)
+		return
+	}
+
+	// Update the ASN and FechaAjusteASN fields
+	_, err = doc.Ref.Update(ctx, []firestore.Update{
+		{Path: "ASN", Value: asn.ASN},
+		{Path: "FechaAjusteASN", Value: asn.FechaAjusteASN},
+	})
+	if err != nil {
+		http.Error(w, "Failed to update ASN", http.StatusInternalServerError)
+		log.Printf("Failed to update ASN: %v", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message":"Entrada submitted successfully."}`))
+
+}
+
 func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	// Get token from header using utils
 	authHeader := r.Header.Get("Authorization")

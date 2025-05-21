@@ -137,7 +137,7 @@ func sendEmail(to string, repName string, subject, body string) error {
 	message := ms.Email.NewMessage()
 
 	message.SetFrom(mailersend.From{
-		Email: "buhologistics@test-68zxl27957m4j905.mlsender.net", // must match your MailerSend domain
+		Email: "buhologistics@test-68zxl27957m4j905.mlsender.net", //MailerSend domain
 		Name:  "Buho Logistics",
 	})
 
@@ -158,7 +158,7 @@ func sendEmail(to string, repName string, subject, body string) error {
 		return err
 	}
 
-	log.Printf("X-Message-Id: %s", res.Header.Get("X-Message-Id")) // helpful for debugging	return nil
+	log.Printf("X-Message-Id: %s", res.Header.Get("X-Message-Id"))
 	log.Printf("Email sent successfully to %s (%s)", repName, to)
 	return nil
 }
@@ -171,7 +171,7 @@ func HandleClientEmailNotification(ctx context.Context, firestoreClient *firesto
 	docSnap, err := firestoreClient.Collection("customers").Doc(entrada.Cliente).Get(ctx)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
-			// Document not found, handle accordingly
+			// Document not found error
 			log.Printf("No customer found with ID: %s", entrada.Cliente)
 			return
 		}
