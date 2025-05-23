@@ -7,6 +7,7 @@ import (
 type Salidas struct {
 	BodegaSalida           string    `json:"bodega_salida"`
 	ProveedorSalida        string    `json:"proveedor_salida"`
+	Cliente                string    `json:"cliente"`
 	NumeroOrdenConsecutivo int64     `json:"numero_orden_consecutivo"`
 	PersonaEntrega         string    `json:"persona_entrega"`
 	PersonaRecoge          string    `json:"persona_recoge"`
@@ -19,6 +20,7 @@ type Salidas struct {
 type SalidasData struct {
 	BodegaSalida           string    `firestore:"BodegaSalida"`
 	ProveedorSalida        string    `firestore:"ProveedorSalida"`
+	Cliente                string    `firestore:"Cliente"`
 	NumeroOrdenConsecutivo int64     `firestore:"NumeroOrdenConsecutivo"`
 	PersonaEntrega         string    `firestore:"PersonaEntrega"`
 	PersonaRecoge          string    `firestore:"PersonaRecoge"`

@@ -287,7 +287,7 @@ func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse numero remision factura
-	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64)
+	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64) // TO DO: switch to string, numero remision factura might be alfanumeric
 	if err != nil {
 		http.Error(w, "Invalid numero_remision_factura format", http.StatusBadRequest)
 		log.Printf("Error parsing numero_remision_factura: %v", err)
@@ -452,6 +452,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	salida := models.Salidas{
 		BodegaSalida:           r.FormValue("bodega_salida"),
 		ProveedorSalida:        r.FormValue("proveedor_salida"),
+		Cliente:                r.FormValue("cliente"),
 		NumeroOrdenConsecutivo: numOrdenCons,
 		PersonaEntrega:         r.FormValue("persona_entrega"),
 		PersonaRecoge:          r.FormValue("persona_recoge"),

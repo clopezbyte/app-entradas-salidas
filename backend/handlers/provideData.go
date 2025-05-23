@@ -41,7 +41,7 @@ func HandleProvideEntradasData(w http.ResponseWriter, r *http.Request) {
 	defer fsClient.Close()
 
 	// Build query and query firestore
-	query := fsClient.Collection("entradas").OrderBy("FechaRecepcion", firestore.Desc).Limit(10)
+	query := fsClient.Collection("entradas").OrderBy("FechaRecepcion", firestore.Desc) //Limit(10)
 	docs, err := query.Documents(ctx).GetAll()
 	if err != nil {
 		log.Printf("Error querying Firestore: %v", err)
@@ -101,7 +101,7 @@ func HandleProvideSalidasData(w http.ResponseWriter, r *http.Request) {
 	defer fsClient.Close()
 
 	// Build query and query firestore
-	query := fsClient.Collection("salidas").OrderBy("FechaSalida", firestore.Desc).Limit(10)
+	query := fsClient.Collection("salidas").OrderBy("FechaSalida", firestore.Desc) //Limit(10)
 	docs, err := query.Documents(ctx).GetAll()
 	if err != nil {
 		log.Printf("Error querying Firestore: %v", err)
