@@ -148,6 +148,14 @@ func sendEmail(to string, repName string, subject, body string) error {
 		},
 	})
 
+	// Uncomment if CC recipients are needed
+	// message.SetCc([]mailersend.Recipient{
+	// 	{
+	// 		Email: "hola@buhologistics.com",
+	// 		Name:  "Buho Logistics",
+	// 	},
+	// })
+
 	message.SetSubject(subject)
 	message.SetText(body)
 	message.SetHTML(body)

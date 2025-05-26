@@ -279,7 +279,7 @@ func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Verified user ID:", token.UID)
 
 	//Parse ASN update date
-	FechaAjusteASN, err := time.Parse("2006-01-02", r.FormValue("fecha_ajuste_asn"))
+	FechaAjusteASN, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_ajuste_asn"))
 	if err != nil {
 		http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
 		log.Printf("Error parsing fecha_recepcion: %v", err)
