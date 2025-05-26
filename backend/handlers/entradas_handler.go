@@ -169,7 +169,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	defer fsClient.Close()
 
 	//Email block
-	if entrada.TipoDelivery == "Devolución (RMA)" && entrada.Cliente != "" {
+	if entrada.TipoDelivery == "Devolución (RMA)" && entrada.Cliente != "N/A" {
 		utils.HandleClientEmailNotification(ctx, fsClient, entrada)
 		//replaced goroutine for testing
 	}
