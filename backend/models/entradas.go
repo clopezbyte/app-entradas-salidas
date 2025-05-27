@@ -9,7 +9,7 @@ type Entradas struct {
 	BodegaRecepcion       string    `json:"bodega_recepcion"`
 	ProveedorRecepcion    string    `json:"proveedor_recepcion"`
 	Cliente               string    `json:"cliente"`
-	NumeroRemisionFactura int64     `json:"numero_remision_factura"`
+	NumeroRemisionFactura string    `json:"numero_remision_factura"`
 	PersonaRecepcion      string    `json:"persona_recepcion"`
 	FechaRecepcion        time.Time `json:"fecha_recepcion"`
 	EvidenciaRecepcion    string    `json:"evidencia_recepcion"` // GCS URL or object path
@@ -23,7 +23,7 @@ type EntradasData struct {
 	Comentarios        string    `firestore:"Comentarios"`
 	EvidenciaRecepcion string    `firestore:"EvidenciaRecepcion"`
 	FechaRecepcion     time.Time `firestore:"FechaRecepcion"`
-	NumeroRemision     int       `firestore:"NumeroRemisionFactura"`
+	NumeroRemision     string    `firestore:"NumeroRemisionFactura"`
 	PersonaRecepcion   string    `firestore:"PersonaRecepcion"`
 	ProveedorRecepcion string    `firestore:"ProveedorRecepcion"`
 	Cliente            string    `firestore:"Cliente"`

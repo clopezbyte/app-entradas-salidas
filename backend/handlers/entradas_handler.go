@@ -118,12 +118,6 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	log.Printf("File uploaded successfully to: %s with content type: %s", imageURL, contentType)
 
 	// Parse form values
-	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid numero_remision_factura", http.StatusBadRequest)
-		log.Printf("Error parsing numero_remision_factura: %v", err)
-		return
-	}
 
 	//Validations Block
 	cant, err := strconv.ParseInt(r.FormValue("cantidad"), 10, 64)
@@ -138,11 +132,25 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		cliente = "N/A"
 	}
 
-	fechaRecepcion, err := time.Parse("2006-01-02T15:04:05.000-0700", r.FormValue("fecha_recepcion"))
+	// fechaRecepcion, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_recepcion"))
+	// if err != nil {
+	// 	http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
+	// 	log.Printf("Error parsing fecha_recepcion: %v", err)
+	// 	return
+	// }
+
+	var fechaRecepcion time.Time
+	fechaRaw := r.FormValue("fecha_recepcion")
+
+	fechaRecepcion, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaRaw)
 	if err != nil {
-		http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
-		log.Printf("Error parsing fecha_recepcion: %v", err)
-		return
+		// Fallback if no timezone
+		fechaRecepcion, err = time.Parse("2006-01-02T15:04:05.000", fechaRaw)
+		if err != nil {
+			http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
+			log.Printf("Error parsing fecha_recepcion: %v", err)
+			return
+		}
 	}
 
 	// Construct Entradas struct
@@ -151,7 +159,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		BodegaRecepcion:       r.FormValue("bodega_recepcion"),
 		ProveedorRecepcion:    r.FormValue("proveedor_recepcion"),
 		Cliente:               cliente,
-		NumeroRemisionFactura: numRem,
+		NumeroRemisionFactura: r.FormValue("numero_remision_factura"),
 		PersonaRecepcion:      r.FormValue("persona_recepcion"),
 		FechaRecepcion:        fechaRecepcion,
 		EvidenciaRecepcion:    imageURL,
@@ -209,10 +217,10 @@ func QueryNumRem(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Verified user ID:", token.UID)
 
 	// Parse numero remision factura
-	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid numero_remision_factura format", http.StatusBadRequest)
-		log.Printf("Error parsing numero_remision_factura: %v", err)
+	numRem := r.FormValue("numero_remision_factura")
+	if numRem == "" {
+		http.Error(w, "Missing numero_remision_factura", http.StatusBadRequest)
+		log.Printf("Missing numero_remision_factura")
 		return
 	}
 
@@ -287,16 +295,10 @@ func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse numero remision factura
-	numRem, err := strconv.ParseInt(r.FormValue("numero_remision_factura"), 10, 64) // TO DO: switch to string, numero remision factura might be alfanumeric
-	if err != nil {
-		http.Error(w, "Invalid numero_remision_factura format", http.StatusBadRequest)
-		log.Printf("Error parsing numero_remision_factura: %v", err)
-		return
-	}
 
 	// Construct ASN struct
 	asn := models.ASN{
-		NumeroRemisionFactura: numRem,
+		NumeroRemisionFactura: r.FormValue("numero_remision_factura"),
 		ASN:                   r.FormValue("asn"),
 		FechaAjusteASN:        FechaAjusteASN,
 	}
@@ -313,11 +315,11 @@ func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
 
 	// Update entrada with ASN
 	// Find the document in "entradas" with the given numero_remision_factura
-	iter := fsClient.Collection("entradas").Where("NumeroRemisionFactura", "==", numRem).Limit(1).Documents(ctx)
+	iter := fsClient.Collection("entradas").Where("NumeroRemisionFactura", "==", asn.NumeroRemisionFactura).Limit(1).Documents(ctx)
 	doc, err := iter.Next()
 	if err != nil {
 		http.Error(w, "No matching entrada found", http.StatusNotFound)
-		log.Printf("No matching entrada found for numero_remision_factura: %d", numRem)
+		log.Printf("No matching entrada found for numero_remision_factura: %s", asn.NumeroRemisionFactura)
 		return
 	}
 
@@ -434,14 +436,8 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	////////////////////////////////////////////////////////////////////////////
 
 	// Parse form values
-	numOrdenCons, err := strconv.ParseInt(r.FormValue("numero_orden_consecutivo"), 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid numero_orden_consecutivo", http.StatusBadRequest)
-		log.Printf("Error parsing numero_orden_consecutivo: %v", err)
-		return
-	}
 
-	fechaSalida, err := time.Parse("2006-01-02T15:04:05.000-0700", r.FormValue("fecha_salida"))
+	fechaSalida, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_salida"))
 	if err != nil {
 		http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
 		log.Printf("Error parsing fecha_salida: %v", err)
@@ -453,7 +449,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		BodegaSalida:           r.FormValue("bodega_salida"),
 		ProveedorSalida:        r.FormValue("proveedor_salida"),
 		Cliente:                r.FormValue("cliente"),
-		NumeroOrdenConsecutivo: numOrdenCons,
+		NumeroOrdenConsecutivo: r.FormValue("numero_orden_consecutivo"),
 		PersonaEntrega:         r.FormValue("persona_entrega"),
 		PersonaRecoge:          r.FormValue("persona_recoge"),
 		FirmaPersonaRecoge:     signatureImageURL,

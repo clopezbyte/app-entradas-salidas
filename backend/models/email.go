@@ -10,7 +10,7 @@ type EmailData struct {
 	Comentarios        string    `firestore:"Comentarios"`
 	EvidenciaRecepcion string    `firestore:"EvidenciaRecepcion"`
 	FechaRecepcion     time.Time `firestore:"FechaRecepcion"`
-	NumeroRemision     int       `firestore:"NumeroRemisionFactura"`
+	NumeroRemision     string    `firestore:"NumeroRemisionFactura"`
 	PersonaRecepcion   string    `firestore:"PersonaRecepcion"`
 	ProveedorRecepcion string    `firestore:"ProveedorRecepcion"`
 	Cliente            string    `firestore:"Cliente"`

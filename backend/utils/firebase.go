@@ -203,7 +203,7 @@ func HandleClientEmailNotification(ctx context.Context, firestoreClient *firesto
 		Comentarios:        entrada.Comentarios,
 		EvidenciaRecepcion: entrada.EvidenciaRecepcion,
 		FechaRecepcion:     entrada.FechaRecepcion,
-		NumeroRemision:     int(entrada.NumeroRemisionFactura),
+		NumeroRemision:     entrada.NumeroRemisionFactura,
 		PersonaRecepcion:   entrada.PersonaRecepcion,
 		ProveedorRecepcion: entrada.ProveedorRecepcion,
 		Cliente:            entrada.Cliente,
