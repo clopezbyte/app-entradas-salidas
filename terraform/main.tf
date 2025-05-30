@@ -61,7 +61,7 @@ resource "google_cloud_run_service" "in-out-goods-app-api" {
 
     spec {
       containers {
-        image = "gcr.io/${var.project_id}/in-out-goods-app-api:dev"
+        image = "gcr.io/${var.project_id}/in-out-goods-app-api:prodv6"
 
         ports {
                 container_port = 8080
