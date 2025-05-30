@@ -47,8 +47,8 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the base64Data from the "evidencia_recepcion" object
-	evidenciaObject := r.FormValue("evidencia_recepcion")           // Contain object as string
-	log.Println("Raw evidencia_recepcion string:", evidenciaObject) // Debug how does it look like
+	evidenciaObject := r.FormValue("evidencia_recepcion") // Contain object as string
+	// log.Println("Raw evidencia_recepcion string:", evidenciaObject) // Debug how does it look like
 
 	// Assuming the evidence object is passed as a JSON string, you can unmarshal it
 	var evidencia map[string]interface{}
@@ -444,11 +444,16 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cliente := r.FormValue("cliente")
+	if cliente == "null" {
+		cliente = "N/A"
+	}
+
 	// Construct Salidas struct
 	salida := models.Salidas{
 		BodegaSalida:           r.FormValue("bodega_salida"),
 		ProveedorSalida:        r.FormValue("proveedor_salida"),
-		Cliente:                r.FormValue("cliente"),
+		Cliente:                cliente,
 		NumeroOrdenConsecutivo: r.FormValue("numero_orden_consecutivo"),
 		PersonaEntrega:         r.FormValue("persona_entrega"),
 		PersonaRecoge:          r.FormValue("persona_recoge"),

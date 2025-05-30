@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/clopezbyte/app-entradas-salidas/models"
@@ -40,8 +42,33 @@ func HandleProvideEntradasData(w http.ResponseWriter, r *http.Request) {
 	}
 	defer fsClient.Close()
 
-	// Build query and query firestore
-	query := fsClient.Collection("entradas").OrderBy("FechaRecepcion", firestore.Desc) //Limit(10)
+	// Get and validate query params
+	monthStr := r.FormValue("month")
+	yearStr := r.FormValue("year")
+	if monthStr == "" || yearStr == "" {
+		http.Error(w, "Missing 'month' or 'year' query parameter", http.StatusBadRequest)
+		return
+	}
+
+	month, err := strconv.Atoi(monthStr)
+	if err != nil || month < 1 || month > 12 {
+		http.Error(w, "Invalid month", http.StatusBadRequest)
+		return
+	}
+	year, err := strconv.Atoi(yearStr)
+	if err != nil || year < 2000 || year > time.Now().Year()+1 {
+		http.Error(w, "Invalid year", http.StatusBadRequest)
+		return
+	}
+
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0) // first day of the next month
+
+	// Query Firestore for EntradasData within the specified date range
+	query := fsClient.Collection("entradas").
+		Where("FechaRecepcion", ">=", startDate).
+		Where("FechaRecepcion", "<", endDate).
+		OrderBy("FechaRecepcion", firestore.Asc)
 	docs, err := query.Documents(ctx).GetAll()
 	if err != nil {
 		log.Printf("Error querying Firestore: %v", err)
@@ -100,8 +127,33 @@ func HandleProvideSalidasData(w http.ResponseWriter, r *http.Request) {
 	}
 	defer fsClient.Close()
 
-	// Build query and query firestore
-	query := fsClient.Collection("salidas").OrderBy("FechaSalida", firestore.Desc) //Limit(10)
+	// Get and validate query params
+	monthStr := r.FormValue("month")
+	yearStr := r.FormValue("year")
+	if monthStr == "" || yearStr == "" {
+		http.Error(w, "Missing 'month' or 'year' query parameter", http.StatusBadRequest)
+		return
+	}
+
+	month, err := strconv.Atoi(monthStr)
+	if err != nil || month < 1 || month > 12 {
+		http.Error(w, "Invalid month", http.StatusBadRequest)
+		return
+	}
+	year, err := strconv.Atoi(yearStr)
+	if err != nil || year < 2000 || year > time.Now().Year()+1 {
+		http.Error(w, "Invalid year", http.StatusBadRequest)
+		return
+	}
+
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0) // first day of the next month
+
+	// Query Firestore for SalidasData within the specified date range
+	query := fsClient.Collection("salidas").
+		Where("FechaSalida", ">=", startDate).
+		Where("FechaSalida", "<", endDate).
+		OrderBy("FechaSalida", firestore.Desc)
 	docs, err := query.Documents(ctx).GetAll()
 	if err != nil {
 		log.Printf("Error querying Firestore: %v", err)
