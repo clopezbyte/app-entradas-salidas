@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/storage"
@@ -287,15 +289,27 @@ func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Verified user ID:", token.UID)
 
 	//Parse ASN update date
-	FechaAjusteASN, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_ajuste_asn"))
+	var FechaAjusteASN time.Time
+	fechaAjusteASNRaw := r.FormValue("fecha_ajuste_asn")
+
+	FechaAjusteASN, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaAjusteASNRaw)
 	if err != nil {
-		http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
-		log.Printf("Error parsing fecha_recepcion: %v", err)
-		return
+		// Fallback if no timezone
+		FechaAjusteASN, err = time.Parse("2006-01-02T15:04:05.000", fechaAjusteASNRaw)
+		if err != nil {
+			http.Error(w, "Invalid fecha_ajuste_asn format", http.StatusBadRequest)
+			log.Printf("Error parsing fecha_ajuste_asn: %v", err)
+			return
+		}
 	}
+	// FechaAjusteASN, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_ajuste_asn"))
+	// if err != nil {
+	// 	http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
+	// 	log.Printf("Error parsing fecha_recepcion: %v", err)
+	// 	return
+	// }
 
 	// Parse numero remision factura
-
 	// Construct ASN struct
 	asn := models.ASN{
 		NumeroRemisionFactura: r.FormValue("numero_remision_factura"),
@@ -561,9 +575,14 @@ func HandleCreateCustomer(w http.ResponseWriter, r *http.Request) {
 	}
 	defer fsClient.Close()
 
-	// Use cliente as the document ID and merge fields if the document exists
-	_, err = fsClient.Collection("customers").Doc(payload.Cliente).Set(ctx, data, firestore.MergeAll)
+	// Use cliente as the document ID and create customer (fail if customer already exists)
+	_, err = fsClient.Collection("customers").Doc(payload.Cliente).Create(ctx, data)
 	if err != nil {
+		if status.Code(err) == codes.AlreadyExists {
+			http.Error(w, "Customer already exists", http.StatusConflict)
+			log.Printf("Customer already exists: %s", payload.Cliente)
+			return
+		}
 		http.Error(w, fmt.Sprintf("Error saving customer to Firestore: %v", err), http.StatusInternalServerError)
 		log.Printf("Error saving customer to Firestore: %v", err)
 		return

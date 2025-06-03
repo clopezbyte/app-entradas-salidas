@@ -188,7 +188,7 @@ var (
 	customerIDsCache      []string
 	customerIDsCacheTime  time.Time
 	customerIDsCacheMutex sync.Mutex
-	cacheDuration         = 15 * time.Minute
+	cacheDuration         = 3 * time.Minute
 )
 
 func HandleProvideCustomers(w http.ResponseWriter, r *http.Request) {
