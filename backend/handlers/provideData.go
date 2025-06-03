@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -176,6 +177,81 @@ func HandleProvideSalidasData(w http.ResponseWriter, r *http.Request) {
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(results); err != nil {
+		log.Printf("Error encoding JSON response: %v", err)
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
+
+}
+
+var (
+	customerIDsCache      []string
+	customerIDsCacheTime  time.Time
+	customerIDsCacheMutex sync.Mutex
+	cacheDuration         = 15 * time.Minute
+)
+
+func HandleProvideCustomers(w http.ResponseWriter, r *http.Request) {
+	customerIDsCacheMutex.Lock()
+	defer customerIDsCacheMutex.Unlock()
+
+	// Serve from cache if not expired
+	if time.Since(customerIDsCacheTime) < cacheDuration && customerIDsCache != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(customerIDsCache)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	idToken, err := utils.GetTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized) // Error message from the utility function
+		return
+	}
+
+	// Verify the token using the firebase package
+	token, err := utils.VerifyIDToken(idToken)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+	fmt.Println("Verified user ID:", token.UID)
+
+	// Use the request's context for proper cancellation
+	ctx := r.Context()
+
+	// Initialize Firestore client
+	fsClient, err := firestore.NewClientWithDatabase(ctx, "b-materials", "app-in-out-good")
+	if err != nil {
+		log.Printf("Error initializing Firestore client: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer fsClient.Close()
+
+	// Query Firestore for SalidasData within the specified date range
+	//cached
+	query := fsClient.Collection("customers")
+	docs, err := query.Documents(ctx).GetAll()
+	if err != nil {
+		log.Printf("Error querying Firestore: %v", err)
+		http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse Firestore documents into a slice of Customers
+	var ids []string
+	for _, doc := range docs {
+		ids = append(ids, doc.Ref.ID)
+	}
+
+	// Update cache
+	customerIDsCache = ids
+	customerIDsCacheTime = time.Now()
+
+	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(ids); err != nil {
 		log.Printf("Error encoding JSON response: %v", err)
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 		return

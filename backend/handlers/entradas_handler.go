@@ -498,3 +498,78 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"message":"Salida submitted successfully."}`))
 }
+
+func HandleCreateCustomer(w http.ResponseWriter, r *http.Request) {
+	// Get token from header using utils
+	authHeader := r.Header.Get("Authorization")
+	idToken, err := utils.GetTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		log.Printf("Invalid header token: %v", err)
+
+		return
+	}
+
+	// Verify the token using the firebase package
+	token, err := utils.VerifyIDToken(idToken)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		log.Printf("Invalid token: %v", err)
+
+		return
+	}
+	fmt.Println("Verified user ID:", token.UID)
+
+	// Parse JSON body
+	var payload struct {
+		Cliente string `json:"cliente"`
+		Code    string `json:"code"`
+		Email   string `json:"email"`
+		RepName string `json:"rep_name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		log.Printf("Error decoding request body: %v", err)
+		return
+	}
+
+	//Validate required fields
+	if payload.Cliente == "" {
+		http.Error(w, "Missing 'cliente' field", http.StatusBadRequest)
+		log.Println("Missing 'cliente' field in request body")
+		return
+	}
+	if payload.Code == "" {
+		http.Error(w, "Missing 'code' field", http.StatusBadRequest)
+		log.Println("Missing 'code' field in request body")
+		return
+	}
+
+	data := map[string]interface{}{
+		"code":     payload.Code,
+		"email":    payload.Email,
+		"rep_name": payload.RepName,
+	}
+
+	ctx := context.Background()
+	fsClient, err := firestore.NewClientWithDatabase(ctx, "b-materials", "app-in-out-good")
+	if err != nil {
+		http.Error(w, "Firestore error", http.StatusInternalServerError)
+		log.Printf("Firestore error: %v", err)
+		return
+	}
+	defer fsClient.Close()
+
+	// Use cliente as the document ID and merge fields if the document exists
+	_, err = fsClient.Collection("customers").Doc(payload.Cliente).Set(ctx, data, firestore.MergeAll)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error saving customer to Firestore: %v", err), http.StatusInternalServerError)
+		log.Printf("Error saving customer to Firestore: %v", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message":"Customer created or updated successfully."}`))
+}
