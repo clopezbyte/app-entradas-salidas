@@ -436,13 +436,26 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	////////////////////////////////////////////////////////////////////////////
 
 	// Parse form values
+	var fechaSalida time.Time
+	fechaSalidaRaw := r.FormValue("fecha_salida")
 
-	fechaSalida, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_salida"))
+	fechaSalida, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaSalidaRaw)
 	if err != nil {
-		http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
-		log.Printf("Error parsing fecha_salida: %v", err)
-		return
+		// Fallback if no timezone
+		fechaSalida, err = time.Parse("2006-01-02T15:04:05.000", fechaSalidaRaw)
+		if err != nil {
+			http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
+			log.Printf("Error parsing fecha_salida: %v", err)
+			return
+		}
 	}
+
+	// fechaSalida, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_salida"))
+	// if err != nil {
+	// 	http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
+	// 	log.Printf("Error parsing fecha_salida: %v", err)
+	// 	return
+	// }
 
 	cliente := r.FormValue("cliente")
 	if cliente == "null" {
