@@ -167,6 +167,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		EvidenciaRecepcion:    imageURL,
 		Cantidad:              cant,
 		Comentarios:           r.FormValue("comentarios"),
+		Type:                  "entrada",
 	}
 
 	// Save to Firestore
@@ -485,6 +486,7 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 		FechaSalida:            fechaSalida,
 		EvidenciaSalida:        imageURL,
 		Comentarios:            r.FormValue("comentarios"),
+		Type:                   "salida",
 	}
 
 	// Save to Firestore

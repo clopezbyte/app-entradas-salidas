@@ -15,6 +15,7 @@ type Entradas struct {
 	EvidenciaRecepcion    string    `json:"evidencia_recepcion"` // GCS URL or object path
 	Cantidad              int64     `json:"cantidad"`
 	Comentarios           string    `json:"comentarios"`
+	Type                  string    `json:"type"`
 }
 
 type EntradasData struct {
@@ -30,4 +31,5 @@ type EntradasData struct {
 	TipoDelivery       string    `firestore:"TipoDelivery"`
 	ASN                string    `firestore:"ASN"`
 	FechaAjusteASN     time.Time `firestore:"FechaAjusteASN"`
+	Type               string    `firestore:"type"`
 }

@@ -15,6 +15,7 @@ type Salidas struct {
 	FechaSalida            time.Time `json:"fecha_salida"`
 	EvidenciaSalida        string    `json:"evidencia_salida"` // GCS URL or object path
 	Comentarios            string    `json:"comentarios"`
+	Type                   string    `json:"type"`
 }
 
 type SalidasData struct {
@@ -28,4 +29,5 @@ type SalidasData struct {
 	FechaSalida            time.Time `firestore:"FechaSalida"`
 	EvidenciaSalida        string    `firestore:"EvidenciaSalida"` // GCS URL or object path
 	Comentarios            string    `firestore:"Comentarios"`
+	Type                   string    `firestore:"type"`
 }
