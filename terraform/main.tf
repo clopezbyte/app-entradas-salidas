@@ -83,11 +83,32 @@ resource "google_cloud_run_service" "in-out-goods-app-api" {
   depends_on = [google_vpc_access_connector.in-out-goods-app-vpc-connector]
 }
 
-# Allow unauthenticated invocations to API
+# Allow outside invocations to API
 resource "google_cloud_run_service_iam_member" "unauthenticated_invoker" {
   service    = google_cloud_run_service.in-out-goods-app-api.name
   location   = var.region
   project    = var.project_id
   role       = "roles/run.invoker"
   member     = "allUsers"
+}
+
+# Firestore to BQ pipeline Cloud Run Job
+resource "google_cloud_run_v2_job" "in-out-analytics-pipeline" {
+  name = "in-out-analytics-pipeline"
+  location = var.region
+  project = var.project_id
+  deletion_protection = "false"
+  template {
+    template {
+      containers {
+        image = "gcr.io/b-materials/in-out-analytics-pipeline:dev"  #Docker image
+
+        env {
+          name = "PROJECT_ID"
+          value = "b-materials"
+        }
+
+      }
+    }
+  }
 }
