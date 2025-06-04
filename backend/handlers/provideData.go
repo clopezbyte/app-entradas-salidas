@@ -77,8 +77,14 @@ func HandleProvideEntradasData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse Firestore documents into a slice with ID
+	type EntradasDataWithID struct {
+		ID string `json:"id"`
+		models.EntradasData
+	}
+
 	// Parse Firestore documents into a slice of EntradasData
-	var results []models.EntradasData
+	var results []EntradasDataWithID
 	for _, doc := range docs {
 		var entrada models.EntradasData
 		if err := doc.DataTo(&entrada); err != nil {
@@ -86,7 +92,10 @@ func HandleProvideEntradasData(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error processing data", http.StatusInternalServerError)
 			return
 		}
-		results = append(results, entrada)
+		results = append(results, EntradasDataWithID{
+			ID:           doc.Ref.ID,
+			EntradasData: entrada,
+		})
 	}
 
 	// Return JSON response

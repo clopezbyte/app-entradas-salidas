@@ -197,7 +197,7 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"message":"Entrada submitted successfully."}`))
 }
 
-func QueryNumRem(w http.ResponseWriter, r *http.Request) {
+func QueryEntrada(w http.ResponseWriter, r *http.Request) {
 	// Get token from header using utils
 	authHeader := r.Header.Get("Authorization")
 	idToken, err := utils.GetTokenFromHeader(authHeader)
@@ -218,11 +218,11 @@ func QueryNumRem(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Verified user ID:", token.UID)
 
-	// Parse numero remision factura
-	numRem := r.FormValue("numero_remision_factura")
-	if numRem == "" {
-		http.Error(w, "Missing numero_remision_factura", http.StatusBadRequest)
-		log.Printf("Missing numero_remision_factura")
+	// Parse ID
+	ID := r.FormValue("id")
+	if ID == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		log.Printf("Missing ID")
 		return
 	}
 
@@ -237,29 +237,24 @@ func QueryNumRem(w http.ResponseWriter, r *http.Request) {
 	defer fsClient.Close()
 
 	// Build query and query firestore
-	query := fsClient.Collection("entradas").Where("NumeroRemisionFactura", "==", numRem).Limit(1)
-	docs, err := query.Documents(ctx).GetAll()
+	docSnap, err := fsClient.Collection("entradas").Doc(ID).Get(ctx)
 	if err != nil {
 		log.Printf("Error querying Firestore: %v", err)
 		http.Error(w, "Error querying Firestore", http.StatusInternalServerError)
 		return
 	}
 
-	// Parse Firestore documents into a slice of EntradasData
-	var results []models.EntradasData
-	for _, doc := range docs {
-		var entrada models.EntradasData
-		if err := doc.DataTo(&entrada); err != nil {
-			log.Printf("Error parsing Firestore document: %v", err)
-			http.Error(w, "Error processing data", http.StatusInternalServerError)
-			return
-		}
-		results = append(results, entrada)
+	var entrada models.EntradasData
+	if err := docSnap.DataTo(&entrada); err != nil {
+		log.Printf("Error parsing Firestore document: %v", err)
+		http.Error(w, "Error processing data", http.StatusInternalServerError)
+		return
 	}
 
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(results); err != nil {
+	// if err := json.NewEncoder(w).Encode(entrada); err != nil {
+	if err := json.NewEncoder(w).Encode([]models.EntradasData{entrada}); err != nil {
 		log.Printf("Error encoding JSON response: %v", err)
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 		return
@@ -302,19 +297,20 @@ func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// FechaAjusteASN, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_ajuste_asn"))
-	// if err != nil {
-	// 	http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
-	// 	log.Printf("Error parsing fecha_recepcion: %v", err)
-	// 	return
-	// }
 
-	// Parse numero remision factura
+	// Parse document id
+	ID := r.FormValue("id")
+	if ID == "" {
+		http.Error(w, "Missing id", http.StatusBadRequest)
+		log.Printf("Missing id: %v", err)
+		return
+	}
+	// Use id everywhere instead of ID
 	// Construct ASN struct
 	asn := models.ASN{
-		NumeroRemisionFactura: r.FormValue("numero_remision_factura"),
-		ASN:                   r.FormValue("asn"),
-		FechaAjusteASN:        FechaAjusteASN,
+		ID:             r.FormValue("id"),
+		ASN:            r.FormValue("asn"),
+		FechaAjusteASN: FechaAjusteASN,
 	}
 
 	// Initialize Firestore client
@@ -329,16 +325,17 @@ func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
 
 	// Update entrada with ASN
 	// Find the document in "entradas" with the given numero_remision_factura
-	iter := fsClient.Collection("entradas").Where("NumeroRemisionFactura", "==", asn.NumeroRemisionFactura).Limit(1).Documents(ctx)
-	doc, err := iter.Next()
+	// iter := fsClient.Collection("entradas").Where("NumeroRemisionFactura", "==", asn.NumeroRemisionFactura).Limit(1).Documents(ctx)
+	// doc, err := iter.Next()
+	docSnap, err := fsClient.Collection("entradas").Doc(ID).Get(ctx)
 	if err != nil {
 		http.Error(w, "No matching entrada found", http.StatusNotFound)
-		log.Printf("No matching entrada found for numero_remision_factura: %s", asn.NumeroRemisionFactura)
+		log.Printf("No matching entrada found for id: %v", ID)
 		return
 	}
 
 	// Update the ASN and FechaAjusteASN fields
-	_, err = doc.Ref.Update(ctx, []firestore.Update{
+	_, err = docSnap.Ref.Update(ctx, []firestore.Update{
 		{Path: "ASN", Value: asn.ASN},
 		{Path: "FechaAjusteASN", Value: asn.FechaAjusteASN},
 	})

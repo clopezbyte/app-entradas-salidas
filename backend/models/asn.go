@@ -5,7 +5,7 @@ import (
 )
 
 type ASN struct {
-	NumeroRemisionFactura string    `json:"numero_remision_factura"`
-	ASN                   string    `json:"asn"`
-	FechaAjusteASN        time.Time `json:"fecha_ajuste_asn"`
+	ID             string    `json:"id"`
+	ASN            string    `json:"asn"`
+	FechaAjusteASN time.Time `json:"fecha_ajuste_asn"`
 }

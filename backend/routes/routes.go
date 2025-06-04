@@ -13,7 +13,7 @@ func SetupRouter() *mux.Router {
 	r.HandleFunc("/entradas-data", handlers.HandleProvideEntradasData).Methods("POST")
 	r.HandleFunc("/salidas", handlers.HandleSalidasSubmit).Methods("POST")
 	r.HandleFunc("/salidas-data", handlers.HandleProvideSalidasData).Methods("POST")
-	r.HandleFunc("/query-numrem", handlers.QueryNumRem).Methods("POST")
+	r.HandleFunc("/query-entrada", handlers.QueryEntrada).Methods("POST")
 	r.HandleFunc("/update-asn", handlers.HandleASNSubmit).Methods("POST")
 	r.HandleFunc("/get-customers", handlers.HandleProvideCustomers).Methods("GET")
 	r.HandleFunc("/create-customer", handlers.HandleCreateCustomer).Methods("POST")
