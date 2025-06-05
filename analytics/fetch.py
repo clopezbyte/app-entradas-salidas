@@ -2,15 +2,12 @@ from google.cloud import firestore
 from google.cloud.firestore_v1 import FieldFilter
 from datetime import datetime
 import pandas as pd
-import os
 import logging
 import sys
-
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
 logger = logging.getLogger('in-out-analytics')
-
 
 class FetchDocuments():
     def __init__(self, project_id: str):
@@ -40,8 +37,78 @@ class FetchDocuments():
 
         try:
             docs = query.stream()
-            data = [doc.to_dict() for doc in docs]
+            data = []
+            for doc in docs:
+                doc_dict = doc.to_dict()
+                doc_dict['id'] = doc.id  
+                data.append(doc_dict)
             return pd.DataFrame(data)
         except Exception as e:
             logger.exception("Failed to fetch Firestore documents.")
             raise
+
+    def prepare_entradas_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        try:
+            data = data[[
+                "id", "BodegaRecepcion", "Cantidad", "Cliente", "FechaRecepcion", "FechaAjusteASN",
+                "TipoDelivery", "PersonaRecepcion", "ProveedorRecepcion", "Type"
+            ]]
+
+            expected_columns = {"id", "BodegaRecepcion", "Cantidad", "Cliente", 
+                                "FechaRecepcion", "FechaAjusteASN", "TipoDelivery", "PersonaRecepcion", 
+                                "ProveedorRecepcion", "Type"}
+            missing = expected_columns - set(data.columns)
+            if missing:
+                logger.error(f"Missing expected columns: {missing}")
+                return pd.DataFrame()
+
+            data.rename(columns={
+                "id": "landing_movement_id",
+                "BodegaRecepcion": "bodega",
+                "Cantidad": "cantidad",
+                "Cliente": "cliente",
+                "FechaRecepcion": "fecha_movimiento",
+                "FechaAjusteASN": "fecha_ajuste_asn",
+                "TipoDelivery": "tipo_delivery",
+                "PersonaRecepcion": "operador",
+                "ProveedorRecepcion": "proveedor",
+                "Type": "tipo"
+            }, inplace=True)
+            
+            return data
+        except Exception as e:
+            logger.exception("Error")
+            return pd.DataFrame()
+        
+    def prepare_salidas_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        try:
+            data = data[[
+                "id", "BodegaSalida", "Cliente", "FechaSalida", "PersonaEntrega", "ProveedorSalida",
+                "Type"
+            ]]
+
+            expected_columns = {"id", "BodegaSalida", "Cliente", "FechaSalida",
+                                "PersonaEntrega", "ProveedorSalida", "Type"}
+            missing = expected_columns - set(data.columns)
+            if missing:
+                logger.error(f"Missing expected columns: {missing}")
+                return pd.DataFrame()
+
+            data.rename(columns={
+                "id": "landing_movement_id",
+                "BodegaSalida": "bodega",
+                "Cliente": "cliente",
+                "FechaSalida": "fecha_movimiento",
+                "PersonaEntrega": "operador",
+                "ProveedorSalida": "proveedor",
+                "Type": "tipo"
+            }, inplace=True)
+
+            data["cantidad"] = 0 #Not tracked
+            data["fecha_ajuste_asn"] = None #Does not apply
+            data["tipo_delivery"] = None #Does not apply
+
+            return data
+        except Exception as e:
+            logger.exception("Error")
+            return pd.DataFrame()
