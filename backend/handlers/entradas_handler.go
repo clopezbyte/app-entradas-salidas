@@ -134,25 +134,28 @@ func HandleEntradasSubmit(w http.ResponseWriter, r *http.Request) {
 		cliente = "N/A"
 	}
 
-	// fechaRecepcion, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_recepcion"))
+	// Parse dates
+
+	// var fechaRecepcion time.Time
+	// fechaRaw := r.FormValue("fecha_recepcion")
+
+	// fechaRecepcion, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaRaw)
 	// if err != nil {
-	// 	http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
-	// 	log.Printf("Error parsing fecha_recepcion: %v", err)
-	// 	return
+	// 	// Fallback if no timezone
+	// 	fechaRecepcion, err = time.Parse("2006-01-02T15:04:05.000", fechaRaw)
+	// 	if err != nil {
+	// 		http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
+	// 		log.Printf("Error parsing fecha_recepcion: %v", err)
+	// 		return
+	// 	}
 	// }
 
-	var fechaRecepcion time.Time
 	fechaRaw := r.FormValue("fecha_recepcion")
-
-	fechaRecepcion, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaRaw)
+	fechaRecepcion, err := time.Parse(time.RFC3339, fechaRaw)
 	if err != nil {
-		// Fallback if no timezone
-		fechaRecepcion, err = time.Parse("2006-01-02T15:04:05.000", fechaRaw)
-		if err != nil {
-			http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
-			log.Printf("Error parsing fecha_recepcion: %v", err)
-			return
-		}
+		http.Error(w, "Invalid fecha_recepcion format", http.StatusBadRequest)
+		log.Printf("Error parsing fecha_recepcion: %v", err)
+		return
 	}
 
 	// Construct Entradas struct
@@ -285,19 +288,24 @@ func HandleASNSubmit(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Verified user ID:", token.UID)
 
 	//Parse ASN update date
-	var FechaAjusteASN time.Time
 	fechaAjusteASNRaw := r.FormValue("fecha_ajuste_asn")
-
-	FechaAjusteASN, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaAjusteASNRaw)
+	FechaAjusteASN, err := time.Parse(time.RFC3339, fechaAjusteASNRaw)
 	if err != nil {
-		// Fallback if no timezone
-		FechaAjusteASN, err = time.Parse("2006-01-02T15:04:05.000", fechaAjusteASNRaw)
-		if err != nil {
-			http.Error(w, "Invalid fecha_ajuste_asn format", http.StatusBadRequest)
-			log.Printf("Error parsing fecha_ajuste_asn: %v", err)
-			return
-		}
+		http.Error(w, "Invalid fecha_ajuste_asn format", http.StatusBadRequest)
+		log.Printf("Error parsing fecha_ajuste_asn: %v", err)
+		return
 	}
+
+	// FechaAjusteASN, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaAjusteASNRaw)
+	// if err != nil {
+	// 	// Fallback if no timezone
+	// 	FechaAjusteASN, err = time.Parse("2006-01-02T15:04:05.000", fechaAjusteASNRaw)
+	// 	if err != nil {
+	// 		http.Error(w, "Invalid fecha_ajuste_asn format", http.StatusBadRequest)
+	// 		log.Printf("Error parsing fecha_ajuste_asn: %v", err)
+	// 		return
+	// 	}
+	// }
 
 	// Parse document id
 	ID := r.FormValue("id")
@@ -448,26 +456,27 @@ func HandleSalidasSubmit(w http.ResponseWriter, r *http.Request) {
 	////////////////////////////////////////////////////////////////////////////
 
 	// Parse form values
-	var fechaSalida time.Time
-	fechaSalidaRaw := r.FormValue("fecha_salida")
+	// var fechaSalida time.Time
+	// fechaSalidaRaw := r.FormValue("fecha_salida")
 
-	fechaSalida, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaSalidaRaw)
-	if err != nil {
-		// Fallback if no timezone
-		fechaSalida, err = time.Parse("2006-01-02T15:04:05.000", fechaSalidaRaw)
-		if err != nil {
-			http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
-			log.Printf("Error parsing fecha_salida: %v", err)
-			return
-		}
-	}
-
-	// fechaSalida, err := time.Parse("2006-01-02T15:04:05.000", r.FormValue("fecha_salida"))
+	// fechaSalida, err = time.Parse("2006-01-02T15:04:05.000-0700", fechaSalidaRaw)
 	// if err != nil {
-	// 	http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
-	// 	log.Printf("Error parsing fecha_salida: %v", err)
-	// 	return
+	// 	// Fallback if no timezone
+	// 	fechaSalida, err = time.Parse("2006-01-02T15:04:05.000", fechaSalidaRaw)
+	// 	if err != nil {
+	// 		http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
+	// 		log.Printf("Error parsing fecha_salida: %v", err)
+	// 		return
+	// 	}
 	// }
+
+	fechaRaw := r.FormValue("fecha_salida")
+	fechaSalida, err := time.Parse(time.RFC3339, fechaRaw)
+	if err != nil {
+		http.Error(w, "Invalid fecha_salida format", http.StatusBadRequest)
+		log.Printf("Error parsing fecha_salida: %v", err)
+		return
+	}
 
 	cliente := r.FormValue("cliente")
 	if cliente == "null" {
