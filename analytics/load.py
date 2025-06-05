@@ -17,7 +17,7 @@ class LoadToBigQuery:
         table_ref = dataset_ref.table(table_name)
 
         job_config = bigquery.LoadJobConfig(
-            # write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE, #leave as default to APPEND
+            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE, #This overwrites data - leave as default (remove line) to APPEND
             schema=[
                 bigquery.SchemaField("landing_movement_id", bigquery.enums.SqlTypeNames.STRING, mode="REQUIRED"),
                 bigquery.SchemaField("bodega", bigquery.enums.SqlTypeNames.STRING, mode="NULLABLE"),

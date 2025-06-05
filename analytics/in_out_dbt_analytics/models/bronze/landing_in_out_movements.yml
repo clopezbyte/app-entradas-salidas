@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: landing_in_out_movements
+    description: "Bronze combined goods ins and outs from the warehouse (MTY, CDMX, GDL)"
+    columns:
+      - name: Fecha
+        description: "Timestamp of the movement"
+        tests:
+          - not_null
+      - name: MovimientoTipo
+        description: "Type of movement: entrada or salida"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["entrada", "salida"]
+      - name: Cantidad
+        description: "Quantity involved in the movement"
+        tests:
+          - not_null
+          - dbt_utils.expect_column_values_to_be_of_type:
+              type: int64
