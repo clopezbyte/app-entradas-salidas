@@ -1,0 +1,11 @@
+in_out_dbt_analytics:
+  target: silver  # Default target
+  outputs:
+    silver:  # For silver layer models
+      type: bigquery
+      method: service-account
+      project: b-materials
+      dataset: in_out_silver
+      threads: 4
+      keyfile: /app/keys/b-materials-dc73796cdc19.json
+      location: us-central1 

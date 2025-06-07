@@ -18,6 +18,22 @@ def parse_int_env(var_name: str, default: int) -> int:
     return default
 
 def run_elt(year: int, month: int):
+    """
+    Extracts monthly data from Firestore and loads it into BigQuery.
+
+    This function uses instances of the `FetchDocuments` and `LoadToBigQuery` classes
+    to retrieve "entradas" and "salidas" documents from Firestore for a given month and year.
+    It processes and merges these datasets, then loads the combined result into the
+    BigQuery dataset `b-materials.in_out_bronze`, table `landing_in_out_movements`.
+
+    Parameters:
+        year (int): The year to fetch data for. Defaults to the current year if not provided.
+        month (int): The month to fetch data for. Defaults to the current month if not provided.
+
+    Notes:
+        - This function is intended to be triggered by Airflow or run manually in a backfill process.
+        - The BigQuery table is overwritten each time (via WRITE_TRUNCATE) to store only the current batch.
+    """
     # Load environment variables
     load_dotenv()
     project_id = os.getenv("PROJECT_ID")
