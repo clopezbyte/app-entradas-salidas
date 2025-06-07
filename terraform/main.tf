@@ -112,3 +112,23 @@ resource "google_cloud_run_v2_job" "in-out-analytics-pipeline" {
     }
   }
 }
+
+resource "google_cloud_run_v2_job" "in-out-analytics-dbt-job" {
+  name = "in-out-analytics-dbt-job"
+  location = var.region
+  project = var.project_id
+  deletion_protection = "false"
+
+  template {
+    template {
+      containers {
+        image = "gcr.io/b-materials/in-out-analytics-dbt-job:dev"  #Docker image
+
+        env {
+          name  = "DBT_KEY_URL"
+          value = "gs://adhoc_data_buho_picks/b-materials-dc73796cdc19.json"
+        }
+      }
+    }
+  }
+}
