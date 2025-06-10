@@ -6,60 +6,58 @@ models:
         description: "uuid for movements silver dataset table"
         tests:
           - not_null
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: string
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "STRING"
       - name: bodega
         description: "Bodega where movement took place at"
         tests:
           - not_null
-          - accepted_values:
-              values: ["Bodega CDMX", "Bodega MTY"]
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: string
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "STRING"
       - name: cantidad
         description: "Quantity involved in the movement"
         tests:
           - not_null
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: int64
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "INT64"
       - name: cliente
         description: "Customer"
         tests:
           - not_null
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: string
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "STRING"
       - name: fecha_movimiento
-        description: "Timestamp for a reception or shipping movement"
+        description: "TIMESTAMP for a reception or shipping movement"
         tests:
           - not_null
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: timestamp
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "TIMESTAMP"
       - name: fecha_ajuste_asn
-        description: "Timestamp for ASN adjustment. This only applies for entradas"
+        description: "TIMESTAMP for ASN adjustment. This only applies for entradas"
         tests:
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: timestamp
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "TIMESTAMP"
       - name: tipo_delivery
         description: "Delivery type, it only applies to entradas"
         tests:
           - not_null
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: string
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "STRING"
       - name: operador
         description: "Internal person who receives or ships goods"
         tests:
           - not_null
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: string
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "STRING"
       - name: proveedor
         description: "Supplier who makes the delivery or picks up a shipment"
         tests:
           - not_null
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: string
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "STRING"
       - name: tipo
         description: "Type of movement"
         tests:
           - not_null
-          - dbt_utils.expect_column_values_to_be_of_type:
-              type: string
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: "STRING"

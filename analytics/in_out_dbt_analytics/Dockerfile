@@ -10,6 +10,9 @@ COPY . .
 # Move profiles.yml to the expected dbt location
 RUN mkdir -p /root/.dbt && cp profiles.yml /root/.dbt/profiles.yml
 
+# Install dbt dependencies from packages.yml
+RUN dbt deps
+
 # Add entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

@@ -34,11 +34,24 @@ WITH new_in_out_data AS(
             WHEN tipo_delivery IS NULL THEN 'N/A' 
             ELSE tipo_delivery
         END AS tipo_delivery,
-        COALESCE(operador, 'UNKNOWN') AS operador, 
-        UPPER(COALESCE(proveedor, 'UNKNOWN')) AS proveedor, 
+        CASE 
+            WHEN operador IS NULL THEN 'UNKNOWN'
+            WHEN operador = 'NA' THEN 'N/A'
+            ELSE operador
+        END AS operador,
+        UPPER(
+            CASE 
+                WHEN proveedor IS NULL THEN 'UNKNOWN'
+                WHEN proveedor = 'NA' THEN 'N/A'
+                ELSE proveedor
+            END 
+        )AS proveedor,
         UPPER(COALESCE(tipo, 'UNKNOWN')) AS tipo 
     FROM 
         `b-materials.in_out_bronze.landing_in_out_movements`
+    WHERE
+        -- TIMESTAMP_TRUNC(fecha_movimiento, MONTH) = TIMESTAMP("2025-05-01") -- For backfilling purposes (try to do dynamically)
+        TIMESTAMP_TRUNC(fecha_movimiento, MONTH) = TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH)
 )
 
 
