@@ -1,4 +1,9 @@
 
+{% set prehook_statement = [] %}
+{% if var('backfill_month', none) is not none %}
+  {% set prehook_statement = ["DELETE FROM {{ this }} WHERE TIMESTAMP_TRUNC(fecha_movimiento, MONTH) = TIMESTAMP('{{ var('backfill_month') }}')"] %}
+{% endif %}
+
 {{ config(
     materialized ='incremental', 
     unique_key = 'silver_movement_id',
@@ -9,8 +14,11 @@
         "data_type": "timestamp",
         "granularity": "month"
     },
-    cluster_by=["tipo","bodega","cliente"]
+    cluster_by=["tipo","bodega","cliente"],
+    pre_hook=prehook_statement
 ) }}
+
+{% set backfill_month = var('backfill_month', none) %}
 
 WITH new_in_out_data AS(
     SELECT
@@ -49,19 +57,19 @@ WITH new_in_out_data AS(
         UPPER(COALESCE(tipo, 'UNKNOWN')) AS tipo 
     FROM 
         `b-materials.in_out_bronze.landing_in_out_movements`
-    WHERE
-        -- TIMESTAMP_TRUNC(fecha_movimiento, MONTH) = TIMESTAMP("2025-05-01") -- For backfilling purposes (try to do dynamically)
-        TIMESTAMP_TRUNC(fecha_movimiento, MONTH) = TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH)
+    {% if backfill_month is not none %}
+    WHERE TIMESTAMP_TRUNC(fecha_movimiento, MONTH) = TIMESTAMP('{{ backfill_month }}')
+    {% endif %}
 )
 
 
-SELECT 
-    *
-FROM 
-    new_in_out_data
-{% if is_incremental() %}
-WHERE 
-    silver_movement_id NOT IN (
-        SELECT silver_movement_id FROM {{ this }}
+{% set date_override = var('dbt_date_override', none) %}
+
+SELECT *
+FROM new_in_out_data
+{% if is_incremental() and backfill_month is none %}
+WHERE fecha_movimiento > (
+    SELECT TIMESTAMP_TRUNC(MAX(fecha_movimiento), MONTH)
+    FROM {{ this }}
 )
 {% endif %}
