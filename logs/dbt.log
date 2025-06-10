@@ -1,0 +1,2 @@
+error: dbt1001: The current directory is not a dbt project directory; cd into it or pass a <path> to it via --project-dir <path>
+  Finished 'show'  with 1 error in 646us 600ns
