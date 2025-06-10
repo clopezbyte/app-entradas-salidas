@@ -80,7 +80,7 @@ Located in backend/, the Go-based REST API manages core warehouse operations.
 
 ### Features
 
-Authentication (JWT-based).
+Authentication Firestore based.
 Firestore CRUD operations for inventory management.
 Business logic for goods movement (entries/exits).
 
