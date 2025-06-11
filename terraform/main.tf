@@ -123,7 +123,7 @@ resource "google_cloud_run_v2_job" "in-out-analytics-dbt-job" {
   template {
     template {
       containers {
-        image = "gcr.io/b-materials/in-out-analytics-dbt-job:prodv1"  #Docker image
+        image = "gcr.io/b-materials/in-out-analytics-dbt-job:prodv2"  #Docker image
 
         env {
           name  = "DBT_KEY_URL"
