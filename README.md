@@ -86,15 +86,10 @@ Located in backend/, the Go-based REST API manages core warehouse operations.
 ### Features
 
 Authentication Firestore based.
-Firestore CRUD operations for inventory management.
+Firestore CRUD operations for warehouse management.
 Business logic for goods movement (entries/exits).
-
-### Key dirs
-
-main.go: Application entry point.
-handlers/: HTTP endpoints for Entradas, Salidas, Customers, etc.
-models/: Domain models (e.g., Product, Transaction).
-utils/: Helper functions (e.g., logging, error handling).
+Customer admin (self service to register new customers for the app).
+ASN update module.
 
 ---
 
@@ -232,7 +227,7 @@ Running dbt run for in_out_silver , silver ...
 Running: dbt run --select "in_out_silver" --target "silver" --vars 'backfill_month: "2025-05-01"'
 
 The last command will basically tell dbt to erase data for that specific month and load the data
-from the bronze table (even if the incremental loading enforces only data data avobe the max date
+from the bronze table (even if the incremental loading enforces only data data above the max date
 in the `fecha_movimiento` column).
 
 ---
