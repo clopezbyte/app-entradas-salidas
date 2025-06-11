@@ -47,13 +47,13 @@ WITH new_in_out_data AS(
             WHEN operador = 'NA' THEN 'N/A'
             ELSE operador
         END AS operador,
-        UPPER(
+        TRIM(UPPER(
             CASE 
-                WHEN proveedor IS NULL THEN 'UNKNOWN'
+                WHEN proveedor IS NULL OR proveedor = '' THEN 'UNKNOWN'
                 WHEN proveedor = 'NA' THEN 'N/A'
                 ELSE proveedor
             END 
-        )AS proveedor,
+        )) AS proveedor,
         UPPER(COALESCE(tipo, 'UNKNOWN')) AS tipo 
     FROM 
         `b-materials.in_out_bronze.landing_in_out_movements`
