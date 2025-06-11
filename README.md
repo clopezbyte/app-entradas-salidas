@@ -110,6 +110,11 @@ Load to GCS and BigQuery.
 Transform with dbt for dashboards and ML-ready datasets.
 Orchestrate with Airflow (Cloud Composer)
 
+### Dags
+`in_out_analytics_pipeline`: This DAG orchestrates the ELT process for the In & Out Transactional System using the Cloud Run Jobs: in-out-analytics-pipeline and the in-out-analytics-dbt-job.
+
+`DAG Schedule:` runs at 06:00 on the 1st of the month
+
 ---
 
 ## Infrastructure (Terraform)
