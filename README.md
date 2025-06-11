@@ -44,7 +44,8 @@ The system follows a modular, cloud-native architecture:
 Data flows from user inputs (Retool → API → Firestore) to analytics (BigQuery → dbt → Looker).
 
 **Infra Diagram:**
-<img src="docs_images/architecture_in_out.png" alt="overrides_opt" width="600"/>
+
+<img src="docs_images/architecture_in_out.png" alt="overrides_opt" width="800"/>
 
 ---
 
@@ -198,9 +199,11 @@ First, execute the `in-out-analytics-pipeline` , with **overrides**:
 `MONTH`: (your target month)
 
 **Access run with overrides:**
+
 <img src="docs_images/overrides_option.png" alt="overrides_opt" width="600"/>
 
 **Pass overrides:**
+
 <img src="docs_images/EL_overrides.png" alt="el_overrides" width="600"/>
 
 What this does is overriding the default configs of the extraction and loading to bronze logic
@@ -212,9 +215,11 @@ Then, execute the `in-out-analytics-dbt-job` , with **overrides**:
 `DBT_VARS`: (backfill_month: "2025-05-01") ***replace the YYYY-mm-dd date with the date you used for step 1***
 
 **Access run with overrides:**
+
 <img src="docs_images/overrides_option.png" alt="overrides_opt" width="600"/>
 
 **Pass overrides:**
+
 <img src="docs_images/T_override.png" alt="t_overrides" width="600"/>
 
 This should generate these logs:
