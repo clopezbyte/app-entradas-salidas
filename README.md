@@ -14,6 +14,7 @@ A solution for tracking goods entering and exiting warehouses. This project incl
 - [Infrastructure (Terraform)](#infrastructure-terraform)
 - [Deploying Infrastructure to GCP](#deploying-infrastructure-to-gcp)
 - [Setup & Deployment](#setup-and-deployment)
+- [Running Backfill Pipelines](#backfill-pipelines)
 - [License](#license)
 - [Contact](#contact)
 
@@ -35,12 +36,15 @@ This project provides a comprehensive warehouse management system with the follo
 The system follows a modular, cloud-native architecture:
 
 - **Frontend**: Retool-based web/mobile apps for user interaction, consuming the Go API.
-- **Backend**: Go REST API hosted on Cloud Run, handling authentication, CRUD operations, and business logic, with Firestore as the primary database.
-- **Data Pipeline**: Python ETL scripts extract data from Firestore and load it into BigQuery. dbt models transform data, orchestrated by Airflow DAGs running on Google Cloud Composer.
+- **Backend**: Go REST API hosted on Cloud Run Service, handling authentication, CRUD operations, and business logic, with Firestore as the primary database.
+- **Data Pipeline**: Python EL extracts data from Firestore and loads it into BigQuery bronze dataset. dbt models transform data into silver, orchestrated by Airflow DAGs running on Google Cloud Composer.
 - **Infrastructure**: Terraform provisions VPC, Cloud Run, Firestore, BigQuery, GCS, and IAM roles for secure access.
-- **Storage & Analytics**: BigQuery hosts processed datasets in a Medallion Architecture, and Firestore manages real-time inventory.
+- **Storage & Analytics**: BigQuery hosts processed datasets in a Medallion Architecture, and Firestore manages near real-time inventory.
 
 Data flows from user inputs (Retool → API → Firestore) to analytics (BigQuery → dbt → Looker).
+
+**Infra Diagram:**
+<img src="docs_images/architecture_in_out.png" alt="overrides_opt" width="600"/>
 
 ---
 
@@ -99,8 +103,8 @@ Located in analytics/, this module processes warehouse data for reporting and ML
 
 ### Components
 
-fetch.py, load.py: Python scripts for ETL (extract from Firestore, load to GCS/BigQuery).
-in_out_dbt_analytics/: dbt models for data transformation and reporting.
+fetch.py, load.py: Python scripts for EL (extract from Firestore, load to GCS/BigQuery).
+in_out_dbt_analytics/: dbt models for data transformation (transform from bronze to silver).
 dags/: Airflow DAGs for pipeline orchestration.
 
 ### Purpose
@@ -181,6 +185,50 @@ terraform apply
 - **Test the Application**:  
   - Access the API via Retool or `cURL`.
   - Verify data in BigQuery and dashboards.
+
+---
+
+## Backfill Pipelines
+
+Whenever you need to re run the analytics pipeline for a specific month, you need to manually
+execute the cloud run jobs.
+
+First, execute the `in-out-analytics-pipeline` , with **overrides**:
+`YEAR`: (your target year)
+`MONTH`: (your target month)
+
+**Access run with overrides:**
+<img src="docs_images/overrides_option.png" alt="overrides_opt" width="600"/>
+
+**Pass overrides:**
+<img src="docs_images/EL_overrides.png" alt="el_overrides" width="600"/>
+
+What this does is overriding the default configs of the extraction and loading to bronze logic
+in the container - it will do so for the year and month that you pass by.
+
+Then, execute the `in-out-analytics-dbt-job` , with **overrides**:
+`DBT_MODEL`: (the name of your desired model)
+`DBT_TARGET`: (the name of your target)
+`DBT_VARS`: (backfill_month: "2025-05-01") ***replace the YYYY-mm-dd date with the date you used for step 1***
+
+**Access run with overrides:**
+<img src="docs_images/overrides_option.png" alt="overrides_opt" width="600"/>
+
+**Pass overrides:**
+<img src="docs_images/T_override.png" alt="t_overrides" width="600"/>
+
+This should generate these logs:
+
+Running dbt with:
+DBT_MODEL: in_out_silver
+DBT_TARGET: silver
+DBT_VARS: backfill_month: "2025-05-01"
+Running dbt run for in_out_silver , silver ...
+Running: dbt run --select "in_out_silver" --target "silver" --vars 'backfill_month: "2025-05-01"'
+
+The last command will basically tell dbt to erase data for that specific month and load the data
+from the bronze table (even if the incremental loading enforces only data data avobe the max date
+in the `fecha_movimiento` column).
 
 ---
 
