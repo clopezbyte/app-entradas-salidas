@@ -32,7 +32,7 @@ def get_target_date(**kwargs):
 with DAG(
     dag_id='in_out_analytics_pipeline',
     default_args=default_args,
-    schedule_interval='@monthly', 
+    schedule_interval='30 15 1 * *', #NOTE: UTC Timestamp == 09:30 on first day of the month AM CST
     catchup= False,
     tags=['in_out_pipeline', 'elt'],
     description= 'This DAG orchestrates the ELT process for the In & Out Transactional System' \
