@@ -7,7 +7,7 @@ from airflow.providers.google.cloud.operators.cloud_run import CloudRunExecuteJo
 
 default_args = {
     'owner': 'clopez',
-    'start_date': datetime(2025, 6, 1),
+    'start_date': datetime(2025, 8, 1),
     'retries': 1,
     'retry_delay': timedelta(minutes=10),
     'project_id': 'b-materials',
