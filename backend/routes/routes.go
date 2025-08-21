@@ -17,5 +17,6 @@ func SetupRouter() *mux.Router {
 	r.HandleFunc("/update-asn", handlers.HandleASNSubmit).Methods("POST")
 	r.HandleFunc("/get-customers", handlers.HandleProvideCustomers).Methods("GET")
 	r.HandleFunc("/create-customer", handlers.HandleCreateCustomer).Methods("POST")
+	r.HandleFunc("/rma-query", handlers.HandleRmaQuery).Methods("POST")
 	return r
 }
