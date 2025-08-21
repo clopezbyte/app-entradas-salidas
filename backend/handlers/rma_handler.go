@@ -16,7 +16,7 @@ func HandleRmaQuery(w http.ResponseWriter, r *http.Request) {
 	// Validate API key
 	apiKey := os.Getenv("API_KEY")
 	token := r.Header.Get("Authorization")
-	if token != "ApiKey "+apiKey {
+	if token != "Bearer "+apiKey {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
